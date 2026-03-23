@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, UserPlus, X, Check, Trash2, Key, Users, HardDrive, Database, Activity, Image as ImageIcon, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 // Simple cn helper
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -8,6 +9,7 @@ function cn(...classes: (string | boolean | undefined)[]) {
 }
 
 const Admin = () => {
+  const { t } = useTranslation();
   const { isAdmin: isSystemAdmin } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -152,7 +154,7 @@ const Admin = () => {
   if (!isSystemAdmin) return (
       <div className="h-[60vh] flex flex-col items-center justify-center text-red-500 font-sans">
           <Shield size={48} className="mb-4 opacity-20" />
-          <h1 className="text-xl font-black uppercase tracking-widest">Access Denied</h1>
+          <h1 className="text-xl font-black uppercase tracking-widest">{t('common.access_denied')}</h1>
       </div>
   );
 
@@ -160,8 +162,8 @@ const Admin = () => {
     <div className="max-w-4xl mx-auto pb-24 font-sans animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-white tracking-tight">System <span className="text-primary">Admin</span></h1>
-          <p className="text-gray-500 font-medium">Manage user accounts, roles and media constants.</p>
+          <h1 className="text-4xl font-black text-white tracking-tight">{t('admin.title_system')} <span className="text-primary">{t('admin.title_admin')}</span></h1>
+          <p className="text-gray-500 font-medium">{t('admin.subtitle')}</p>
         </div>
         {activeTab === 'users' && (
           <button 
@@ -169,7 +171,7 @@ const Admin = () => {
               className="flex items-center gap-2 px-8 py-4 bg-primary text-secondary rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
             >
               {showAddForm ? <X size={20} /> : <UserPlus size={20} />}
-              {showAddForm ? 'Cancel Creation' : 'Create New User'}
+              {showAddForm ? t('common.cancel') : t('admin.create_user')}
             </button>
         )}
         {activeTab === 'roles' && (
@@ -178,7 +180,7 @@ const Admin = () => {
               className="flex items-center gap-2 px-8 py-4 bg-primary text-secondary rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
             >
               {showRoleForm ? <X size={20} /> : <Shield size={20} />}
-              {showRoleForm ? 'Cancel Creation' : 'Create New Role'}
+              {showRoleForm ? t('common.cancel') : t('admin.create_role')}
             </button>
         )}
       </div>
@@ -218,7 +220,7 @@ const Admin = () => {
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-sm font-black text-white">{drive.percentage}%</span>
-                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">{drive.free} available of {drive.total}</span>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter">{t('admin.available_of', { free: drive.free, total: drive.total })}</span>
                   </div>
                 </div>
                 <div className="relative h-2 bg-black/40 rounded-full overflow-hidden">
@@ -234,7 +236,7 @@ const Admin = () => {
         <div className="space-y-8 animate-in slide-in-from-bottom-4">
           {showAddForm && (
             <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-primary/20 p-8">
-              <h2 className="text-xs font-black text-primary uppercase mb-6 tracking-widest">New User Account</h2>
+              <h2 className="text-xs font-black text-primary uppercase mb-6 tracking-widest">{t('admin.new_user_account')}</h2>
               <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <input type="text" required value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Username" />
                 <input type="text" required value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Password" />
@@ -252,9 +254,9 @@ const Admin = () => {
             <table className="w-full text-left">
               <thead className="bg-black/40">
                 <tr>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Identity</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Role Access</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-right">Actions</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">{t('admin.identity')}</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">{t('admin.role_access')}</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase text-right">{t('admin.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -292,7 +294,7 @@ const Admin = () => {
                       {parseInt(u.id) !== useAuth().user?.id && (
                         <button 
                           onClick={async () => {
-                            if(confirm(`Are you sure you want to delete ${u.username}?`)) {
+                            if(confirm(t('admin.confirm_delete_user', { username: u.username }))) {
                               await fetch(`/api/admin/users/${u.id}`, { 
                                 method: 'DELETE', 
                                 headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -319,9 +321,9 @@ const Admin = () => {
           <table className="w-full text-left">
             <thead className="bg-black/40">
               <tr>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">User</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Action</th>
-                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">Target</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">{t('login.username')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">{t('admin.action')}</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-500 uppercase">{t('admin.target')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -351,7 +353,7 @@ const Admin = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Assign Permissions</p>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t('admin.assign_permissions')}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {permissions.map(p => (
                       <label key={p.id} className={cn(
@@ -384,7 +386,7 @@ const Admin = () => {
                     className="bg-primary text-secondary px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Saving...' : (editingRoleId ? 'Update Role' : 'Create Role')}
+                    {isSubmitting ? t('common.loading') : (editingRoleId ? t('admin.update_role') : t('admin.create_role_btn'))}
                   </button>
                 </div>
               </form>
@@ -397,7 +399,7 @@ const Admin = () => {
                  <div className="flex justify-between items-start mb-6">
                    <div className="space-y-1">
                     <h3 className="font-black text-white text-xl tracking-tight">{r.name.toUpperCase()}</h3>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{r.description || 'No description provided'}</p>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{r.description || t('admin.no_description')}</p>
                    </div>
                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                       <button 
@@ -413,8 +415,8 @@ const Admin = () => {
                       </button>
                       <button 
                         onClick={async () => {
-                          if (r.name === 'admin' || r.name === 'user') return alert('System roles cannot be deleted');
-                          if (confirm(`Delete role ${r.name}?`)) {
+                          if (r.name === 'admin' || r.name === 'user') return alert(t('admin.error_delete_system_role'));
+                          if (confirm(t('admin.confirm_delete_role', { name: r.name }))) {
                              await fetch(`/api/admin/roles/${r.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }});
                              fetchRolesData();
                           }
@@ -432,7 +434,7 @@ const Admin = () => {
                        <span key={p} className="text-[9px] bg-black/40 text-primary border border-primary/20 px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">{p.replace(':',' ')}</span>
                      ))
                    ) : (
-                     <span className="text-[9px] text-gray-600 font-black uppercase italic">No atomic permissions</span>
+                     <span className="text-[9px] text-gray-600 font-black uppercase italic">{t('admin.no_atomic_perms')}</span>
                    )}
                  </div>
                </div>
@@ -446,7 +448,7 @@ const Admin = () => {
           <div className="bg-secondary/40 p-8 rounded-3xl border border-white/5">
             <h2 className="text-xl font-black text-white mb-8 flex items-center gap-3">
               <ImageIcon className="text-primary" />
-              Stock Avatars Library
+              {t('admin.stock_avatars_library')}
             </h2>
             <form 
               onSubmit={async (e) => {

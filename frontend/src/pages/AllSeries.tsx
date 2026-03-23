@@ -13,6 +13,7 @@ import {
   Database
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface Anime {
   id: string;
@@ -29,6 +30,7 @@ interface Subscription {
 }
 
 const AllSeries: React.FC = () => {
+  const { t } = useTranslation();
   const [animeList, setAnimeList] = useState<Anime[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,15 +173,15 @@ const AllSeries: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Suggestion sent successfully!');
+        alert(t('catalog.suggestion_success'));
         setSelectedAnime(null);
       } else {
         const err = await response.json();
-        alert('Error: ' + err.error);
+        alert(t('catalog.suggestion_error', { error: err.error }));
       }
     } catch (error) {
       console.error('Error suggesting anime:', error);
-      alert('Connection error');
+      alert(t('catalog.suggestion_conn_error'));
     } finally {
       setIsSuggesting(false);
     }
@@ -202,7 +204,7 @@ const AllSeries: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Download added to queue');
+        alert(t('common.download_added_to_queue'));
       }
     } catch (error) {
       console.error('Error starting download:', error);
@@ -217,8 +219,8 @@ const AllSeries: React.FC = () => {
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-secondary/50 p-6 rounded-3xl border border-accent backdrop-blur-sm">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">Complete <span className="text-primary">Catalog</span></h1>
-          <p className="text-gray-400 font-medium tracking-tight">Explore the entire Crunchyroll library.</p>
+          <h1 className="text-4xl font-black tracking-tighter text-white uppercase italic">{t('all_series.title_main')} <span className="text-primary">{t('all_series.title_highlight')}</span></h1>
+          <p className="text-gray-400 font-medium tracking-tight">{t('all_series.subtitle')}</p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
@@ -226,7 +228,7 @@ const AllSeries: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={18} />
             <input 
               type="text"
-              placeholder="Search in loaded..."
+              placeholder={t('all_series.search_placeholder')}
               className="pl-10 pr-4 py-2 bg-accent border-transparent rounded-xl focus:bg-accent/80 focus:border-primary/50 transition-all text-sm w-full md:w-64 text-white outline-none"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -238,9 +240,9 @@ const AllSeries: React.FC = () => {
             onChange={(e) => setSort(e.target.value)}
             className="bg-accent px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider cursor-pointer hover:bg-accent/80 transition-colors border-transparent text-white outline-none"
           >
-            <option value="popularity">Popularity</option>
-            <option value="newly_added">Newly Added</option>
-            <option value="alphabetical">Alphabetical</option>
+            <option value="popularity">{t('catalog.popularity')}</option>
+            <option value="newly_added">{t('catalog.newly_added')}</option>
+            <option value="alphabetical">{t('catalog.alphabetical')}</option>
           </select>
         </div>
       </div>
@@ -248,7 +250,7 @@ const AllSeries: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <div className="text-xs font-black uppercase tracking-[0.3em] text-primary animate-pulse">Fetching Library...</div>
+          <div className="text-xs font-black uppercase tracking-[0.3em] text-primary animate-pulse">{t('all_series.fetching_library')}</div>
         </div>
       ) : (
         <div className="space-y-10">
@@ -268,7 +270,7 @@ const AllSeries: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                       <button className="w-full py-2 bg-primary text-background font-black text-xs uppercase rounded-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg">
-                        Details
+                        {t('catalog.details')}
                       </button>
                     </div>
                     
@@ -308,7 +310,7 @@ const AllSeries: React.FC = () => {
                    <RefreshCw className="w-5 h-5 animate-spin text-primary" />
                  ) : (
                    <>
-                     <span className="text-sm font-black uppercase tracking-widest text-white">Load More Content</span>
+                     <span className="text-sm font-black uppercase tracking-widest text-white">{t('catalog.load_more')}</span>
                      <ChevronDown className="w-5 h-5 text-primary group-hover:translate-y-1 transition-transform" />
                    </>
                  )}
@@ -329,8 +331,8 @@ const AllSeries: React.FC = () => {
                 <img src={selectedAnime.image} className="h-full rounded-xl shadow-2xl border border-white/10 hidden sm:block" alt={selectedAnime.title} />
                 <div className="flex flex-col justify-end flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-500 font-bold text-xs uppercase bg-orange-500/10 px-2 py-0.5 rounded tracking-widest">Library</span>
-                    {selectedAnime.is_simulcast && <span className="text-blue-400 font-bold text-xs uppercase bg-blue-400/10 px-2 py-0.5 rounded tracking-widest">Simulcast</span>}
+                    <span className="text-orange-500 font-bold text-xs uppercase bg-orange-500/10 px-2 py-0.5 rounded tracking-widest">{t('dashboard.in_library')}</span>
+                    {selectedAnime.is_simulcast && <span className="text-blue-400 font-bold text-xs uppercase bg-blue-400/10 px-2 py-0.5 rounded tracking-widest">{t('catalog.simulcast')}</span>}
                   </div>
                   <h2 className="text-3xl font-bold text-white mb-4 leading-tight">{selectedAnime.title}</h2>
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -349,14 +351,14 @@ const AllSeries: React.FC = () => {
                           ) : (
                             subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? <BellOff size={14} /> : <Bell size={14} />
                           )}
-                          {subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? 'Subscribed' : 'Subscribe Weekly'}
+                          {subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? t('catalog.subscribed') : t('catalog.subscribe_weekly')}
                         </button>
                       )}
 
                       {isContributor && storageData.length > 0 && (
                         <div className="flex flex-col gap-1 min-w-[180px]">
                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                            <Database size={10} /> Target Volume
+                            <Database size={10} /> {t('all_series.target_volume')}
                           </label>
                           <select
                             value={selectedVolume}
@@ -365,7 +367,7 @@ const AllSeries: React.FC = () => {
                           >
                             {storageData.map(drive => (
                               <option key={drive.path} value={drive.path} className="bg-secondary">
-                                {drive.path.split(/[\\/]/).pop() || drive.path} ({drive.free} free)
+                                {drive.path.split(/[\\/]/).pop() || drive.path} ({drive.free} {t('catalog.available')})
                               </option>
                             ))}
                           </select>
@@ -378,7 +380,7 @@ const AllSeries: React.FC = () => {
                           className="flex items-center gap-2 px-3 py-1.5 h-[38.5px] bg-gray-800 hover:bg-gray-700 border border-white/5 text-white text-xs font-bold rounded-lg transition-colors shadow-lg self-end"
                         >
                           <Download className="w-4 h-4" />
-                          DOWNLOAD ALL
+                          {t('all_series.download_all')}
                         </button>
                       ) : (
                         <button
@@ -387,7 +389,7 @@ const AllSeries: React.FC = () => {
                           className="flex items-center gap-2 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black rounded-lg transition-all shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50"
                         >
                           {isSuggesting ? <RefreshCw size={14} className="animate-spin" /> : <MessageSquare size={14} />}
-                          SUGGEST CONTENT
+                          {t('catalog.suggest_content')}
                         </button>
                       )}
                     </div>
@@ -404,9 +406,9 @@ const AllSeries: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
                <div className="space-y-6">
                   <div>
-                    <h3 className="text-orange-500 font-black text-xs uppercase tracking-widest mb-2">Description</h3>
+                    <h3 className="text-orange-500 font-black text-xs uppercase tracking-widest mb-2">{t('all_series.description_label')}</h3>
                     <p className="text-gray-400 text-sm leading-relaxed">
-                      {selectedAnime.description || 'No description available.'}
+                      {selectedAnime.description || t('all_series.no_description')}
                     </p>
                   </div>
                </div>

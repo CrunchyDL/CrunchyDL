@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Check, X, MessageSquare, Clock, User, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface Suggestion {
   id: number;
@@ -14,6 +15,7 @@ interface Suggestion {
 }
 
 const Suggestions: React.FC = () => {
+  const { t } = useTranslation();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, token } = useAuth();
@@ -63,6 +65,7 @@ const Suggestions: React.FC = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+        <p className="ml-4 text-xs font-black uppercase tracking-widest text-primary">{t('common.loading')}</p>
       </div>
     );
   }
@@ -73,17 +76,17 @@ const Suggestions: React.FC = () => {
         <div>
           <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
             <MessageSquare className="w-10 h-10 text-orange-500" />
-            Community Suggestions
+            {t('suggestions.title')}
           </h1>
-          <p className="text-gray-400 mt-2 font-medium">Manage user download requests.</p>
+          <p className="text-gray-400 mt-2 font-medium">{t('suggestions.subtitle')}</p>
         </div>
       </div>
 
       {suggestions.length === 0 ? (
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-12 text-center">
           <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white">No suggestions yet</h3>
-          <p className="text-gray-400 mt-2">User requests will appear here.</p>
+          <h3 className="text-xl font-bold text-white">{t('suggestions.no_suggestions')}</h3>
+          <p className="text-gray-400 mt-2">{t('suggestions.description')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -108,7 +111,7 @@ const Suggestions: React.FC = () => {
                     suggestion.status === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                     'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                   }`}>
-                    {suggestion.status}
+                    {t(`dashboard.${suggestion.status}`) || suggestion.status}
                   </span>
                 </div>
               </div>
@@ -122,7 +125,7 @@ const Suggestions: React.FC = () => {
                 <div className="space-y-2 mt-auto">
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <User className="w-4 h-4 text-orange-500" />
-                    <span>Suggested by: <strong className="text-gray-200">{suggestion.suggested_by}</strong></span>
+                    <span>{t('suggestions.suggested_by')} <strong className="text-gray-200">{suggestion.suggested_by}</strong></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <Clock className="w-4 h-4 text-orange-500" />
@@ -138,14 +141,14 @@ const Suggestions: React.FC = () => {
                       className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
                     >
                       <Check className="w-5 h-5" />
-                      Approve
+                      {t('suggestions.approve')}
                     </button>
                     <button
                       onClick={() => handleAction(suggestion.id, 'rejected')}
                       className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
                       <X className="w-5 h-5" />
-                      Reject
+                      {t('suggestions.reject')}
                     </button>
                   </div>
                 )}
@@ -155,7 +158,7 @@ const Suggestions: React.FC = () => {
                     <p className={`text-sm font-bold ${
                       suggestion.status === 'approved' ? 'text-green-400/60' : 'text-red-400/60'
                     }`}>
-                      {suggestion.status === 'approved' ? 'This suggestion was approved' : 'This suggestion was rejected'}
+                      {suggestion.status === 'approved' ? t('suggestions.approved_msg') : t('suggestions.rejected_msg')}
                     </p>
                   </div>
                 )}

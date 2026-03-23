@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Shield, Info, LogOut, FileVideo, Settings as SettingsIcon, Save, Check, ChevronDown, X, ChevronUp, Library, Database, Cpu, Monitor, Download } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+import { useTranslation } from 'react-i18next';
+
 // Simple cn helper since lib/utils doesn't exist
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -40,6 +42,7 @@ const Dropdown = ({
   onChange: (val: any) => void,
   useCode?: boolean
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -72,20 +75,20 @@ const Dropdown = ({
 
   const getDisplayValue = () => {
     if (multiple) {
-      if (!Array.isArray(value) || value.length === 0) return 'none';
-      if (value.includes('all')) return 'All Languages';
-      if (value.includes('none')) return 'None';
-      return `${value.length} selected`;
+      if (!Array.isArray(value) || value.length === 0) return t('settings.none');
+      if (value.includes('all')) return t('settings.all_languages');
+      if (value.includes('none')) return t('settings.none');
+      return `${value.length} ${t('settings.selected')}`;
     }
     const option = options.find(o => (useCode ? o.code : o.locale) === value);
-    return option ? option.locale : (value || 'Select...');
+    return option ? option.locale : (value || t('common.loading'));
   };
 
   return (
     <div className="space-y-2 relative" ref={dropdownRef}>
       <label className="text-xs font-bold text-gray-400 uppercase ml-1 flex items-center justify-between">
           {label}
-          {multiple && <span className="text-[10px] text-gray-600 normal-case italic">Multi-selection</span>}
+          {multiple && <span className="text-[10px] text-gray-600 normal-case italic">{t('settings.multi_selection')}</span>}
       </label>
       <div 
         onClick={() => setIsOpen(!isOpen)}
@@ -115,7 +118,7 @@ const Dropdown = ({
                 )}
               >
                 {value.includes('all') && <Check size={14} className="text-primary" />}
-                Select All
+                {t('settings.all_languages')}
               </div>
               <div 
                 onClick={() => toggleOption('none')}
@@ -125,7 +128,7 @@ const Dropdown = ({
                 )}
               >
                 {value.includes('none') && <Check size={14} className="text-primary" />}
-                None
+                {t('settings.none')}
               </div>
               <div className="h-[1px] bg-white/5 my-1" />
             </>
@@ -139,7 +142,7 @@ const Dropdown = ({
                 )}
               >
                 {value === 'none' && <Check size={14} className="text-primary" />}
-                None
+                {t('settings.none')}
               </div>
           )}
           {LANGUAGES.map(lang => {
@@ -170,7 +173,9 @@ const Dropdown = ({
   );
 };
 
-const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCredentials, handleLogin, loggingIn }: any) => (
+const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCredentials, handleLogin, loggingIn }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
     <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 overflow-hidden">
       <div 
@@ -188,24 +193,24 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
             <User size={24} />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">Crunchyroll Account</div>
+            <div className="text-lg font-bold text-white">{t('settings.account_title')}</div>
             <div className="text-sm text-gray-400">
-              {authStatus?.type === 'user' ? `Logged in as ${authStatus.username}` : 'Using Anonymous Guest Token'}
+              {authStatus?.type === 'user' ? t('settings.logged_in_as', { username: authStatus.username }) : t('settings.anonymous_guest')}
             </div>
           </div>
         </div>
         <div className="px-4 py-2 bg-white/5 text-primary text-xs font-black uppercase tracking-wider rounded-xl border border-white/5">
-            {showLogin ? 'Cancel' : 'Modify Access'}
+            {showLogin ? t('common.cancel') : t('settings.modify_access')}
         </div>
       </div>
       
       {showLogin && (
         <div className="p-8 space-y-8 bg-black/40">
           <form onSubmit={handleLogin} className="space-y-6">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest px-1 border-l-2 border-primary ml-1">Login with Credentials</h3>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest px-1 border-l-2 border-primary ml-1">{t('settings.login_credentials')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Username / Email</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">{t('settings.username_email')}</label>
                 <input 
                   type="text" 
                   value={credentials.username}
@@ -215,7 +220,7 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Password</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">{t('settings.password')}</label>
                 <input 
                   type="password" 
                   value={credentials.password}
@@ -232,22 +237,22 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
             >
               {loggingIn && !credentials.token ? (
                   <div className="w-5 h-5 border-2 border-secondary/20 border-t-secondary rounded-full animate-spin" />
-              ) : 'Authenticate Credentials'}
+              ) : t('settings.auth_credentials')}
             </button>
           </form>
 
           <div className="relative py-2 flex items-center">
             <div className="flex-grow border-t border-white/5"></div>
-            <span className="flex-shrink mx-6 text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">or safer method</span>
+            <span className="flex-shrink mx-6 text-[10px] text-gray-600 font-black uppercase tracking-[0.2em]">{t('settings.safer_method')}</span>
             <div className="flex-grow border-t border-white/5"></div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest px-1 border-l-2 border-primary ml-1">Login with Refresh Token</h3>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest px-1 border-l-2 border-primary ml-1">{t('settings.login_token')}</h3>
             <div className="space-y-2">
               <label className="text-[10px] font-bold text-gray-500 uppercase ml-1 flex justify-between">
-                <span>Refresh Token (etp-rt cookie)</span>
-                <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/wiki/How-to-get-your-token" target="_blank" rel="noreferrer" className="text-primary hover:underline lowercase tracking-normal font-medium">how to find it?</a>
+                <span>{t('settings.refresh_token')}</span>
+                <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/wiki/How-to-get-your-token" target="_blank" rel="noreferrer" className="text-primary hover:underline lowercase tracking-normal font-medium">{t('settings.how_to_find')}</a>
               </label>
               <input 
                 type="text" 
@@ -264,7 +269,7 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
             >
               {loggingIn && credentials.token ? (
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : 'Authenticate Token'}
+              ) : t('settings.auth_token')}
             </button>
           </form>
         </div>
@@ -272,8 +277,11 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
     </div>
   </div>
 );
+};
 
-const MuxingSection = ({ config, updateConfig }: any) => (
+const MuxingSection = ({ config, updateConfig }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
     <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 p-8 space-y-8">
       <div className="flex items-center justify-between p-6 bg-primary/10 rounded-2xl border border-primary/20">
@@ -282,8 +290,8 @@ const MuxingSection = ({ config, updateConfig }: any) => (
             <FileVideo size={24} />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">Video Re-encoding</div>
-            <div className="text-sm text-gray-400">Process files into specific codecs and resolutions</div>
+            <div className="text-lg font-bold text-white">{t('settings.video_encoding')}</div>
+            <div className="text-sm text-gray-400">{t('settings.encoding_desc')}</div>
           </div>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
@@ -301,14 +309,14 @@ const MuxingSection = ({ config, updateConfig }: any) => (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Dropdown 
-              label="Primary Audio Track"
+              label={t('settings.primary_audio_track')}
               value={config.defaultAudio || 'jpn'}
               options={LANGUAGES}
               useCode={true}
               onChange={(val) => updateConfig('defaultAudio', val)}
             />
             <Dropdown 
-              label="Additional Audios"
+              label={t('settings.additional_audios')}
               value={config.dubLang || ['jpn']}
               options={LANGUAGES}
               multiple={true}
@@ -320,12 +328,12 @@ const MuxingSection = ({ config, updateConfig }: any) => (
           <div className="space-y-6 pt-6 border-t border-white/5">
             <div className="flex items-center gap-3">
                 <Shield size={18} className="text-primary" />
-                <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Audio & Subtitle Priority</h3>
+                <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">{t('settings.priority_title')}</h3>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Dropdown 
-                label="Primary Audio"
+                label={t('settings.primary_audio')}
                 value={config.audioPriority?.[0] || 'jpn'}
                 options={LANGUAGES}
                 useCode={true}
@@ -336,7 +344,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
                 }}
               />
               <Dropdown 
-                label="Secondary Audio"
+                label={t('settings.secondary_audio')}
                 value={config.audioPriority?.[1] || 'eng'}
                 options={LANGUAGES}
                 useCode={true}
@@ -347,7 +355,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
                 }}
               />
               <Dropdown 
-                label="Tertiary Audio"
+                label={t('settings.tertiary_audio')}
                 value={config.audioPriority?.[2] || 'spa-ES'}
                 options={LANGUAGES}
                 useCode={true}
@@ -361,7 +369,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
               <Dropdown 
-                label="Primary Sub"
+                label={t('settings.primary_sub')}
                 value={config.subtitlePriority?.[0] || 'en-US'}
                 options={LANGUAGES}
                 onChange={(val) => {
@@ -371,7 +379,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
                 }}
               />
               <Dropdown 
-                label="Secondary Sub"
+                label={t('settings.secondary_sub')}
                 value={config.subtitlePriority?.[1] || 'es-419'}
                 options={LANGUAGES}
                 onChange={(val) => {
@@ -381,7 +389,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
                 }}
               />
               <Dropdown 
-                label="Tertiary Sub"
+                label={t('settings.tertiary_sub')}
                 value={config.subtitlePriority?.[2] || 'es-ES'}
                 options={LANGUAGES}
                 onChange={(val) => {
@@ -394,7 +402,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
           </div>
 
           <Dropdown 
-            label="Subtitles to Download"
+            label={t('settings.subs_to_download')}
             value={config.dlsubs || ['all']}
             options={LANGUAGES}
             multiple={true}
@@ -434,10 +442,10 @@ const MuxingSection = ({ config, updateConfig }: any) => (
           </div>
 
           <div className="space-y-8 pt-8 border-t border-white/5">
-            <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] border-l-2 border-primary pl-3">Encoding Profiles</h3>
+            <h3 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em] border-l-2 border-primary pl-3">{t('settings.encoding_profiles')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Resolution Preset</label>
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t('settings.res_preset')}</label>
                 <select
                   value={config.encodingPreset || 'custom'}
                   onChange={(e) => updateConfig('encodingPreset', e.target.value)}
@@ -469,7 +477,7 @@ const MuxingSection = ({ config, updateConfig }: any) => (
               </div>
               
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Encoding Speed (Preset)</label>
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t('settings.speed_preset')}</label>
                 <select
                   value={config.x265Preset || 'none'}
                   onChange={(e) => updateConfig('x265Preset', e.target.value)}
@@ -491,8 +499,11 @@ const MuxingSection = ({ config, updateConfig }: any) => (
     </div>
   </div>
 );
+};
 
-const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig }: any) => (
+const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
     <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 p-8 space-y-8">
       <div className="space-y-6">
@@ -501,8 +512,8 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
             <Database size={24} />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">Provider Priority</div>
-            <div className="text-sm text-gray-400">Order for automated metadata matching</div>
+            <div className="text-lg font-bold text-white">{t('settings.provider_priority')}</div>
+            <div className="text-sm text-gray-400">{t('settings.priority_desc')}</div>
           </div>
         </div>
         
@@ -539,7 +550,7 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
       </div>
 
       <div className="pt-8 border-t border-white/5 space-y-8">
-        <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.2em] border-l-2 border-primary pl-3">External API Keys</h3>
+        <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.2em] border-l-2 border-primary pl-3">{t('settings.api_keys')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">TMDB API Key (v3)</label>
@@ -571,8 +582,8 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
                     <Cpu size={24} />
                 </div>
                 <div>
-                    <div className="text-lg font-bold">Scan Concurrency</div>
-                    <div className="text-sm text-gray-400">Parallel series processing (default: 4)</div>
+                    <div className="text-lg font-bold">{t('settings.scan_concurrency')}</div>
+                    <div className="text-sm text-gray-400">{t('settings.concurrency_desc')}</div>
                 </div>
             </div>
             <div className="w-full md:w-32">
@@ -593,8 +604,8 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
                     <Library size={24} />
                 </div>
                 <div>
-                    <div className="text-lg font-bold">Auto-Scan Library</div>
-                    <div className="text-sm text-gray-400">Trigger library scan after each download</div>
+                    <div className="text-lg font-bold">{t('settings.auto_scan')}</div>
+                    <div className="text-sm text-gray-400">{t('settings.auto_scan_desc')}</div>
                 </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -611,8 +622,11 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
     </div>
   </div>
 );
+};
 
-const SystemSection = ({ systemInfo, appVersion }: any) => (
+const SystemSection = ({ systemInfo, appVersion }: any) => {
+  const { t } = useTranslation();
+  return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 p-8 flex flex-col items-center justify-center text-center space-y-4">
@@ -621,7 +635,7 @@ const SystemSection = ({ systemInfo, appVersion }: any) => (
             </div>
             <div>
                 <div className="text-3xl font-black text-white">{systemInfo?.cpus || '0'}</div>
-                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mt-1">CPU Threads</div>
+                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mt-1">{t('settings.cpu_threads')}</div>
             </div>
         </div>
         <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 p-8 flex flex-col items-center justify-center text-center space-y-4">
@@ -630,7 +644,7 @@ const SystemSection = ({ systemInfo, appVersion }: any) => (
             </div>
             <div>
                 <div className="text-3xl font-black text-white">{systemInfo?.totalMem || '0'} GB</div>
-                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mt-1">Total RAM</div>
+                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mt-1">{t('settings.total_ram')}</div>
             </div>
         </div>
     </div>
@@ -642,8 +656,8 @@ const SystemSection = ({ systemInfo, appVersion }: any) => (
                     <Monitor size={20} />
                 </div>
                 <div>
-                    <div className="font-bold text-white">Environment</div>
-                    <div className="text-xs text-gray-500">OS Platform & Version</div>
+                    <div className="font-bold text-white">{t('settings.environment')}</div>
+                    <div className="text-xs text-gray-500">{t('settings.os_desc')}</div>
                 </div>
             </div>
             <div className="text-right">
@@ -657,13 +671,13 @@ const SystemSection = ({ systemInfo, appVersion }: any) => (
                     <Info size={20} />
                 </div>
                 <div>
-                    <div className="font-bold text-white">Software Version</div>
-                    <div className="text-xs text-gray-500">multi-downloader-nx core</div>
+                    <div className="font-bold text-white">{t('settings.software_version')}</div>
+                    <div className="text-xs text-gray-500">{t('settings.core_desc')}</div>
                 </div>
             </div>
             <div className="text-right">
                 <div className="text-sm font-black text-primary uppercase tracking-widest">v1.2.0</div>
-                <div className="text-[10px] text-green-500 font-bold uppercase tracking-tighter">Up to date</div>
+                <div className="text-[10px] text-green-500 font-bold uppercase tracking-tighter">{t('settings.up_to_date')}</div>
             </div>
         </div>
     </div>
@@ -671,14 +685,16 @@ const SystemSection = ({ systemInfo, appVersion }: any) => (
     <div className="pt-4">
         <button className="w-full py-6 bg-red-500/10 text-red-500 font-black rounded-3xl border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center justify-center gap-3 uppercase tracking-[0.3em] text-sm shadow-2xl">
             <LogOut size={20} /> 
-            Critical: Reset Application
+            {t('settings.reset_app')}
         </button>
-        <p className="text-[10px] text-gray-600 text-center mt-4 italic">Warning: This action will purge all database entries and linked account tokens.</p>
+        <p className="text-[10px] text-gray-600 text-center mt-4 italic">{t('settings.reset_warning')}</p>
     </div>
   </div>
 );
+};
 
 const Settings = () => {
+  const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState<'account' | 'downloads' | 'library' | 'system'>('account');
   const [config, setConfig] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -723,10 +739,10 @@ const Settings = () => {
         setShowLogin(false);
       } else {
         const error = await res.json();
-        alert(`Authentication Error: ${error.error}`);
+        alert(t('settings.auth_error', { error: error.error }));
       }
     } catch (err) {
-      alert('Network Error');
+      alert(t('common.error'));
     } finally {
       setLoggingIn(false);
     }
@@ -761,7 +777,7 @@ const Settings = () => {
   if (!config) return (
     <div className="h-[60vh] flex flex-col items-center justify-center text-gray-500 font-sans">
        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-6" />
-       <div className="text-xs font-black uppercase tracking-[0.3em] opacity-50">Syncing Preferences...</div>
+       <div className="text-xs font-black uppercase tracking-[0.3em] opacity-50">{t('settings.syncing')}</div>
     </div>
   );
 
@@ -777,8 +793,8 @@ const Settings = () => {
 
   const tabs = [
     { id: 'account', label: 'Crunchyroll', icon: User },
-    { id: 'downloads', label: 'Downloads', icon: Download },
-    { id: 'library', label: 'Library', icon: Library },
+    { id: 'downloads', label: t('sidebar.downloads'), icon: Download },
+    { id: 'library', label: t('sidebar.library'), icon: Library },
     { id: 'system', label: 'System', icon: Cpu },
   ];
 
@@ -786,8 +802,8 @@ const Settings = () => {
     <div className="max-w-4xl mx-auto pb-24 font-sans animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-white tracking-tight">App <span className="text-primary">Settings</span></h1>
-          <p className="text-gray-500 font-medium">Configure account, muxing engine and system preferences.</p>
+          <h1 className="text-4xl font-black text-white tracking-tight">{t('settings.title').split(' ')[0]} <span className="text-primary">{t('settings.title').split(' ')[1]}</span></h1>
+          <p className="text-gray-500 font-medium">{t('settings.subtitle')}</p>
         </div>
         <button
           onClick={handleSave}
@@ -798,12 +814,11 @@ const Settings = () => {
           )}
         >
           {saved ? (
-              <><Check size={20} /> Changes Saved</>
-          ) : saving ? (
-              <div className="w-5 h-5 border-2 border-secondary/20 border-t-secondary rounded-full animate-spin" />
+             <Check size={20} />
           ) : (
-              <><Save size={20} /> Save Configuration</>
+             <Save size={20} className={saving ? 'animate-spin' : ''} />
           )}
+          {saved ? t('settings.saved') : (saving ? t('settings.syncing') : t('settings.save_changes'))}
         </button>
       </div>
 
@@ -864,7 +879,7 @@ const Settings = () => {
       {saved && (
           <div className="fixed bottom-10 right-10 bg-green-500 text-white px-6 py-4 rounded-2xl font-black shadow-2xl flex items-center gap-3 animate-in slide-in-from-right duration-300">
               <Check size={24} />
-              Settings Synced Successfully
+              {t('settings.saved')}
           </div>
       )}
     </div>

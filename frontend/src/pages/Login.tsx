@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User, LogIn, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Login: React.FC = () => {
+    const { t } = useTranslation();
     const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -16,7 +18,7 @@ const Login: React.FC = () => {
         try {
             await login(username, password);
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
+            setError(err.response?.data?.error || t('login.invalid_credentials'));
         } finally {
             setIsLoading(false);
         }
@@ -34,7 +36,7 @@ const Login: React.FC = () => {
                         <Lock className="text-secondary" size={32} />
                     </div>
                     <h1 className="text-4xl font-black text-white tracking-tight mb-2 uppercase">Crunchy<span className="text-primary">DL</span></h1>
-                    <p className="text-gray-500 font-medium">Authentication Required</p>
+                    <p className="text-gray-500 font-medium">{t('login.title')}</p>
                 </div>
 
                 <div className="bg-secondary/40 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl">
@@ -47,7 +49,7 @@ const Login: React.FC = () => {
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Username</label>
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{t('login.username')}</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-primary transition-colors">
                                     <User size={20} />
@@ -55,7 +57,7 @@ const Login: React.FC = () => {
                                 <input 
                                     type="text" 
                                     className="w-full bg-black/40 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-primary/50 focus:bg-black/60 transition-all placeholder:text-gray-700"
-                                    placeholder="Enter your username"
+                                    placeholder={t('login.username_placeholder')}
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     required
@@ -64,7 +66,7 @@ const Login: React.FC = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Password</label>
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">{t('login.password')}</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-500 group-focus-within:text-primary transition-colors">
                                     <Lock size={20} />
@@ -90,7 +92,7 @@ const Login: React.FC = () => {
                             ) : (
                                 <>
                                     <LogIn size={20} />
-                                    Access System
+                                    {t('login.access_system')}
                                 </>
                             )}
                         </button>
@@ -98,7 +100,7 @@ const Login: React.FC = () => {
                 </div>
                 
                 <p className="text-center mt-8 text-sm text-gray-600">
-                    Restricted Access Area • v2.0
+                    {t('login.restricted_area')} • v2.0
                 </p>
             </div>
         </div>

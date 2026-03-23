@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search as SearchIcon, Download, Info, Loader2, Check, Play, Plus, Trash2, Database } from 'lucide-react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 interface Anime {
   id: string;
@@ -18,6 +19,7 @@ interface SeasonDetails {
 }
 
 const Search = () => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -143,7 +145,7 @@ const Search = () => {
         episodes: episodesValue,
         rootPath: selectedVolume
       });
-      alert('Download added to queue');
+      alert(t('common.download_added_to_queue'));
     } catch (error) {
       console.error('Error starting download:', error);
     }
@@ -151,7 +153,7 @@ const Search = () => {
 
   const downloadAllMissingSeries = async (anime: Anime) => {
     if (!details) return;
-    alert('This action will start downloading all missing episodes from all seasons.');
+    alert(t('search.download_missing_warning'));
 
     for (const season of details.seasons) {
       try {
@@ -166,7 +168,7 @@ const Search = () => {
         console.error(`Error processing season ${season.title}:`, err);
       }
     }
-    alert('Download queue updated for the entire series');
+    alert(t('search.download_queue_updated'));
   };
 
   const rescanSeries = async (anime: Anime) => {
@@ -175,7 +177,7 @@ const Search = () => {
       await axios.post(`/api/library/series/${anime.id}/refresh`);
       const statusRes = await axios.get(`/api/library/series/${anime.id}/status`);
       setEpisodeStatus(statusRes.data);
-      alert('Library re-scanned for this series');
+      alert(t('search.library_rescanned'));
     } catch (err) {
       console.error('Error rescanning:', err);
     } finally {
@@ -184,7 +186,7 @@ const Search = () => {
   };
 
   const deleteEpisode = async (anime: Anime, ep: any) => {
-    if (!window.confirm(`Are you sure you want to physically delete episode ${ep.episode_number}?`)) return;
+    if (!window.confirm(t('search.delete_confirm', { episode: ep.episode_number }))) return;
     try {
       await axios.post('/api/library/episode/delete', { episodeId: ep.id });
       // Update local status
@@ -194,15 +196,15 @@ const Search = () => {
       }));
     } catch (err) {
       console.error('Error deleting episode:', err);
-      alert('Error deleting episode');
+      alert(t('common.error_deleting_episode'));
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-black text-white">Search Anime</h1>
-        <p className="text-gray-400">Search for titles and instantly view details, seasons, and episodes.</p>
+        <h1 className="text-4xl font-black text-white">{t('search.title')}</h1>
+        <p className="text-gray-400">{t('search.subtitle')}</p>
       </div>
 
       <div className="bg-gray-900/50 p-6 rounded-2xl border border-white/5 backdrop-blur-sm shadow-xl">
@@ -215,7 +217,7 @@ const Search = () => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={service === 'anidb' ? "Enter AniDB ID (AID), e.g. '1535'..." : "Enter anime title, e.g. 'Naruto'..."}
+              placeholder={service === 'anidb' ? t('search.placeholder_id') : t('search.placeholder_title')}
               className="w-full bg-gray-800 border-gray-700 border text-white rounded-xl py-4 pl-12 pr-4 outline-none focus:border-orange-500/50 focus:ring-4 focus:ring-orange-500/10 transition-all text-lg shadow-inner"
             />
           </div>
@@ -227,10 +229,10 @@ const Search = () => {
             >
               <option value="crunchy">Crunchyroll</option>
               <option value="hidive">HIDIVE</option>
-              <option value="anilist">Anilist / MAL (Metadata)</option>
-              <option value="tmdb">TheMovieDB (Metadata)</option>
-              <option value="tvdb">TheTVDB (Metadata)</option>
-              <option value="anidb">AniDB (Metadata via AID)</option>
+              <option value="anilist">{t('search.anilist_mal')}</option>
+              <option value="tmdb">{t('search.tmdb_meta')}</option>
+              <option value="tvdb">{t('search.tvdb_meta')}</option>
+              <option value="anidb">{t('search.anidb_meta')}</option>
             </select>
             <button
               type="submit"
@@ -238,7 +240,7 @@ const Search = () => {
               className="px-8 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
             >
               {loading ? <Loader2 className="animate-spin" size={20} /> : <SearchIcon size={20} />}
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? t('common.searching') : t('common.search')}
             </button>
           </div>
         </form>
@@ -269,7 +271,7 @@ const Search = () => {
                   {anime.title}
                 </h3>
                 {service === 'anilist' && (
-                  <div className="mt-1 text-[10px] text-blue-400 font-mono uppercase tracking-tighter">AniList / MAL</div>
+                  <div className="mt-1 text-[10px] text-blue-400 font-mono uppercase tracking-tighter">{t('search.anilist_mal_short')}</div>
                 )}
               </div>
             </div>
@@ -297,7 +299,7 @@ const Search = () => {
         </div>
       ) : !loading && query && (
         <div className="text-center py-20 text-gray-500">
-          No results found. Try another search term.
+          {t('common.no_results_found')}
         </div>
       )}
 
@@ -320,20 +322,20 @@ const Search = () => {
                           className="flex items-center gap-2 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg transition-colors shadow-lg"
                         >
                           <Download className="w-4 h-4" />
-                          DOWNLOAD ALL (SERIES)
+                          {t('search.download_all')}
                         </button>
                         <button
                           onClick={() => downloadAllMissingSeries(selectedAnime)}
                           className="flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors shadow-lg"
                         >
                           <Plus className="w-4 h-4" />
-                          DOWNLOAD MISSING
+                          {t('search.download_missing')}
                         </button>
                       </>
                     )}
                     {selectedAnime.id.startsWith('al-') && (
                       <div className="px-3 py-1.5 bg-blue-600/20 text-blue-400 text-[10px] font-bold rounded-lg border border-blue-500/30 uppercase tracking-widest">
-                        Metadata Provider Only
+                        {t('search.metadata_provider_only')}
                       </div>
                     )}
                     <button
@@ -341,19 +343,19 @@ const Search = () => {
                       className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded-lg transition-colors"
                     >
                       <Play className="w-4 h-4 rotate-90" />
-                      RE-SCAN LIBRARY
+                      {t('search.rescan_library')}
                     </button>
                   </div>
                   <div className="flex flex-col gap-2 mb-4 bg-black/20 p-3 rounded-lg border border-white/5">
                     {existingPath ? (
                       <div className="flex items-center gap-2">
                         <Check className="w-4 h-4 text-green-500" />
-                        <span className="text-xs text-gray-300">In library: <span className="text-white font-mono">{existingPath}</span></span>
+                        <span className="text-xs text-gray-300">{t('search.in_library_path')} <span className="text-white font-mono">{existingPath}</span></span>
                       </div>
                     ) : storageData.length > 0 ? (
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                          <Database size={10} /> Download Volume
+                          <Database size={10} /> {t('search.download_volume')}
                         </label>
                         <select
                           value={selectedVolume}
@@ -389,7 +391,7 @@ const Search = () => {
                 <div className="space-y-8">
                   {details && (
                     <div>
-                      <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2"> Seasons</h3>
+                      <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2"> {t('search.seasons')}</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {details.seasons.map((s) => (
                           <div
@@ -399,7 +401,7 @@ const Search = () => {
                           >
                             <div>
                               <p className="text-white font-medium">{s.title}</p>
-                              <p className="text-xs text-gray-400">{s.episode_count} Episodes</p>
+                              <p className="text-xs text-gray-400">{s.episode_count} {t('search.episodes_count')}</p>
                             </div>
                             <div className="flex gap-2">
                               <button
@@ -443,15 +445,15 @@ const Search = () => {
                               <div className="flex_1">
                                 <div className="flex items-center gap-2">
                                   <p className="text-white font-medium text-sm">{ep.episode_number}. {ep.title}</p>
-                                  {isDownloaded && <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">On Disk</span>}
-                                  {!isDownloaded && archiveStatus[ep.id] && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">Archived</span>}
+                                  {isDownloaded && <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">{t('search.on_disk')}</span>}
+                                  {!isDownloaded && archiveStatus[ep.id] && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">{t('search.archived')}</span>}
                                 </div>
                                 <p className="text-xs text-gray-400">{Math.floor(ep.duration_ms / 60000)} min</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => toggleArchive(ep)}
-                                  title={archiveStatus[ep.id] ? "Remove from archive" : "Mark as owned (Archive)"}
+                                  title={archiveStatus[ep.id] ? t('search.remove_from_archive') : t('search.mark_as_owned')}
                                   className={`p-2 rounded-lg transition-colors ${archiveStatus[ep.id] ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:text-white'}`}
                                 >
                                   <Check className="w-4 h-4" />
@@ -467,7 +469,7 @@ const Search = () => {
                                 {isDownloaded && (
                                   <button
                                     onClick={() => deleteEpisode(selectedAnime!, ep)}
-                                    title="Delete physical file"
+                                    title={t('search.delete_physical')}
                                     className="p-2 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-colors"
                                   >
                                     <Trash2 className="w-4 h-4" />

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Sidebar from './components/Sidebar';
 import Catalog from './pages/Catalog';
 import Search from './pages/Search';
@@ -16,6 +17,7 @@ import Setup from './pages/Setup';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 const AppContent = () => {
+  const { t } = useTranslation();
   const { user, isLoading, isAdmin, mustChangePassword, needsSetup } = useAuth();
 
   if (isLoading) {
@@ -23,7 +25,7 @@ const AppContent = () => {
       <div className="h-screen w-screen flex items-center justify-center bg-background text-primary">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <div className="text-xs font-bold uppercase tracking-[0.2em] opacity-50">Authenticating...</div>
+          <div className="text-xs font-bold uppercase tracking-[0.2em] opacity-50">{t('common.authenticating')}</div>
         </div>
       </div>
     );

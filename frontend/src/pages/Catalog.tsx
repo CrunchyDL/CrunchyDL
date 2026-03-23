@@ -19,6 +19,7 @@ import {
   Play
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 interface Anime {
   id: string;
@@ -40,6 +41,7 @@ interface Subscription {
 }
 
 const Catalog: React.FC = () => {
+  const { t } = useTranslation();
   const [animeList, setAnimeList] = useState<Anime[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +198,7 @@ const Catalog: React.FC = () => {
   };
 
   const deleteEpisode = async (episodeId: string) => {
-    if (!window.confirm('Are you sure you want to delete this file from disk?')) return;
+    if (!window.confirm(t('catalog.delete_episode_confirm'))) return;
     try {
       const response = await fetch(`/api/episodes/${episodeId}`, {
         method: 'DELETE',
@@ -311,15 +313,15 @@ const Catalog: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Suggestion sent successfully!');
+        alert(t('catalog.suggestion_success'));
         setSelectedAnime(null);
       } else {
         const err = await response.json();
-        alert('Error: ' + err.error);
+        alert(t('catalog.suggestion_error', { error: err.error }));
       }
     } catch (error) {
       console.error('Error suggesting anime:', error);
-      alert('Connection error while sending suggestion');
+      alert(t('catalog.suggestion_conn_error'));
     } finally {
       setIsSuggesting(false);
     }
@@ -342,7 +344,7 @@ const Catalog: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Download added to queue');
+        alert(t('common.download_added_to_queue'));
       }
     } catch (error) {
       console.error('Error starting download:', error);
@@ -368,7 +370,7 @@ const Catalog: React.FC = () => {
     });
 
     if (missingEpisodes.length === 0) {
-      alert('All episodes are already in the library!');
+      alert(t('catalog.all_in_library'));
       return;
     }
 
@@ -394,12 +396,12 @@ const Catalog: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 relative z-10">
           <div className="space-y-2">
             <h1 className="text-5xl font-black tracking-tighter text-white uppercase italic leading-none">
-              {mode === 'seasonal' ? 'Seasonal' : mode === 'browse' ? 'Browse' : 'Search'} <span className="text-primary">Catalog</span>
+              {mode === 'seasonal' ? t('catalog.seasonal') : mode === 'browse' ? t('catalog.browse') : t('common.search')} <span className="text-primary">{t('catalog.catalog_title')}</span>
             </h1>
             <p className="text-gray-400 font-medium tracking-tight text-lg max-w-xl">
-              {mode === 'seasonal' ? `Discover what's airing in ${season} ${year}.` : 
-               mode === 'browse' ? 'Explore the most popular series in the entire library.' :
-               `Results for your global search across the platform.`}
+              {mode === 'seasonal' ? t('catalog.seasonal_subtitle', { season: t(`common.${season}`), year }) : 
+               mode === 'browse' ? t('catalog.browse_subtitle') :
+               t('catalog.search_subtitle')}
             </p>
           </div>
 
@@ -408,19 +410,19 @@ const Catalog: React.FC = () => {
               onClick={() => { setMode('seasonal'); setFilter(''); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'seasonal' ? 'bg-primary text-background shadow-lg shadow-primary/20' : 'text-gray-500 hover:text-white'}`}
             >
-              Seasonal
+              {t('catalog.seasonal')}
             </button>
             <button 
               onClick={() => { setMode('browse'); setFilter(''); }}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'browse' ? 'bg-primary text-background shadow-lg shadow-primary/20' : 'text-gray-500 hover:text-white'}`}
             >
-              Discovery
+              {t('catalog.discovery')}
             </button>
             <button 
               onClick={() => setMode('search')}
               className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${mode === 'search' ? 'bg-primary text-background shadow-lg shadow-primary/20' : 'text-gray-500 hover:text-white'}`}
             >
-              Search
+              {t('common.search')}
             </button>
           </div>
         </div>
@@ -430,7 +432,7 @@ const Catalog: React.FC = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={20} />
             <input 
               type="text"
-              placeholder={mode === 'search' ? "Search anything in the platform..." : "Quick filter by title..."}
+              placeholder={mode === 'search' ? t('catalog.search_placeholder') : t('catalog.filter_placeholder')}
               className="w-full pl-12 pr-4 py-4 bg-accent/50 border border-white/5 rounded-2xl focus:bg-accent focus:border-primary/50 transition-all text-sm font-medium text-white placeholder:text-gray-600 outline-none"
               value={mode === 'search' ? searchQuery : filter}
               onChange={(e) => mode === 'search' ? setSearchQuery(e.target.value) : setFilter(e.target.value)}
@@ -443,7 +445,7 @@ const Catalog: React.FC = () => {
                 onClick={handleGlobalSearch}
                 className="flex-1 px-8 py-4 bg-primary text-background font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20"
               >
-                Perform Global Search
+                {t('catalog.perform_search')}
               </button>
             ) : mode === 'seasonal' ? (
               <>
@@ -452,10 +454,10 @@ const Catalog: React.FC = () => {
                   onChange={(e) => setSeason(e.target.value)}
                   className="flex-1 bg-accent/50 border border-white/5 px-6 py-4 rounded-2xl text-sm font-black uppercase tracking-widest text-white cursor-pointer hover:bg-accent transition-all outline-none appearance-none"
                 >
-                  <option value="winter">Winter</option>
-                  <option value="spring">Spring</option>
-                  <option value="summer">Summer</option>
-                  <option value="fall">Fall</option>
+                  <option value="winter">{t('common.winter')}</option>
+                  <option value="spring">{t('common.spring')}</option>
+                  <option value="summer">{t('common.summer')}</option>
+                  <option value="fall">{t('common.fall')}</option>
                 </select>
 
                 <select 
@@ -472,7 +474,7 @@ const Catalog: React.FC = () => {
                 className="flex-1 px-8 py-4 bg-accent/50 border border-white/5 text-gray-400 font-black uppercase tracking-widest rounded-2xl hover:text-white transition-all flex items-center justify-center gap-2"
               >
                 <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                Refresh Discovery
+                {t('catalog.refresh_discovery')}
               </button>
             )}
           </div>
@@ -482,14 +484,14 @@ const Catalog: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 gap-4">
           <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <div className="text-xs font-black uppercase tracking-[0.3em] text-primary animate-pulse">Loading Catalog...</div>
+          <div className="text-xs font-black uppercase tracking-[0.3em] text-primary animate-pulse">{t('catalog.loading')}</div>
         </div>
       ) : (
         <div className="space-y-6">
           {filteredAnime.length === 0 ? (
             <div className="text-center py-32 bg-secondary/30 rounded-3xl border border-dashed border-accent">
                <Filter className="mx-auto text-gray-600 mb-4" size={48} />
-               <h3 className="text-xl font-bold text-gray-400">No matching animes found for this season</h3>
+               <h3 className="text-xl font-bold text-gray-400">{t('catalog.no_matching')}</h3>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
@@ -510,7 +512,7 @@ const Catalog: React.FC = () => {
                         <button 
                           className="w-full py-2 bg-primary text-background font-black text-xs uppercase rounded-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg"
                         >
-                          View Details
+                          {t('catalog.view_details')}
                         </button>
                       </div>
                       
@@ -561,8 +563,8 @@ const Catalog: React.FC = () => {
                 <img src={selectedAnime.image} className="h-full rounded-xl shadow-2xl border border-white/10 hidden sm:block" alt={selectedAnime.title} />
                 <div className="flex flex-col justify-end flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-500 font-bold text-xs uppercase bg-orange-500/10 px-2 py-0.5 rounded tracking-widest">{season} {year}</span>
-                    {selectedAnime.is_simulcast && <span className="text-blue-400 font-bold text-xs uppercase bg-blue-400/10 px-2 py-0.5 rounded tracking-widest">Simulcast</span>}
+                    <span className="text-orange-500 font-bold text-xs uppercase bg-orange-500/10 px-2 py-0.5 rounded tracking-widest">{t(`common.${season}`)} {year}</span>
+                    {selectedAnime.is_simulcast && <span className="text-blue-400 font-bold text-xs uppercase bg-blue-400/10 px-2 py-0.5 rounded tracking-widest">{t('catalog.simulcast')}</span>}
                   </div>
                   <h2 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight break-words uppercase italic">{selectedAnime.title}</h2>
                     {/* Actions Row 1: Subscriptions and Suggestions */}
@@ -582,7 +584,7 @@ const Catalog: React.FC = () => {
                           ) : (
                             subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? <BellOff size={14} /> : <Bell size={14} />
                           )}
-                          {subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? 'Subscribed' : 'Subscribe Weekly'}
+                          {subscriptions.find(s => s.series_id === selectedAnime.id && s.active) ? t('catalog.subscribed') : t('catalog.subscribe_weekly')}
                         </button>
                       )}
 
@@ -593,7 +595,7 @@ const Catalog: React.FC = () => {
                           className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50"
                         >
                           {isSuggesting ? <RefreshCw size={14} className="animate-spin" /> : <MessageSquare size={14} />}
-                          SUGERIR A LA COMUNIDAD
+                          {t('catalog.suggest_community')}
                         </button>
                       )}
                     </div>
@@ -605,7 +607,7 @@ const Catalog: React.FC = () => {
                           {storageData.length > 0 && (
                             <div className="flex flex-col gap-2 min-w-[240px]">
                               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-1.5 ml-1">
-                                <Database size={12} className="text-primary" /> Download Destination
+                                <Database size={12} className="text-primary" /> {t('catalog.download_destination')}
                               </label>
                               {!(selectedAnime && selectedAnime.lib_path) ? (
                                 <select
@@ -615,17 +617,17 @@ const Catalog: React.FC = () => {
                                 >
                                   {storageData.map(drive => (
                                     <option key={drive.path} value={drive.path} className="bg-secondary">
-                                      {drive.path.split(/[\\/]/).pop() || drive.path} — {drive.free} available
+                                      {drive.path.split(/[\\/]/).pop() || drive.path} — {drive.free} {t('catalog.available')}
                                     </option>
                                   ))}
                                 </select>
                               ) : (
                                 <div className="bg-primary/5 p-3 rounded-2xl border border-primary/20 flex items-center justify-between">
                                   <div className="text-sm font-bold text-white truncate max-w-[200px]">
-                                    {selectedAnime.folder_name ? `Folder: ${selectedAnime.folder_name}` : (selectedVolume.split(/[\\/]/).pop() || 'LIBRARY')}
+                                    {selectedAnime.folder_name ? t('catalog.folder_label', { name: selectedAnime.folder_name }) : (selectedVolume.split(/[\\/]/).pop() || t('catalog.library'))}
                                   </div>
                                   <div className="text-[9px] font-black text-primary uppercase tracking-widest px-2 py-1 bg-primary/20 rounded-lg">
-                                    LOCKED
+                                    {t('catalog.locked')}
                                   </div>
                                 </div>
                               )}
@@ -637,16 +639,16 @@ const Catalog: React.FC = () => {
                               onClick={() => startDownload(selectedAnime, 'all')}
                               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl group/btn"
                             >
-                              <Download className="w-4 h-4 group-hover/btn:translate-y-0.5 transition-transform" />
-                              DOWNLOAD FULL TO {selectedVolume.split(/[\\/]/).pop() || 'DRIVE'}
+                                <Download className="w-4 h-4 group-hover/btn:translate-y-0.5 transition-transform" />
+                                {t('catalog.download_full_to_drive', { drive: selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
                             </button>
                             
                             <button
                               onClick={() => downloadAllMissingSeries(selectedAnime)}
                               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-green-900/20"
                             >
-                               <Play className="w-4 h-4" />
-                               DOWNLOAD MISSING TO {selectedVolume.split(/[\\/]/).pop() || 'DRIVE'}
+                                <Play className="w-4 h-4" />
+                                {t('catalog.download_missing_to_drive', { drive: selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
                             </button>
                           </div>
                         </div>
@@ -665,9 +667,9 @@ const Catalog: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
                <div className="space-y-6">
                   <div>
-                    <h3 className="text-orange-500 font-black text-xs uppercase tracking-widest mb-2">Overview</h3>
+                    <h3 className="text-orange-500 font-black text-xs uppercase tracking-widest mb-2">{t('catalog.overview')}</h3>
                     <p className="text-gray-400 text-sm leading-relaxed">
-                      {selectedAnime.description || 'No description available for this anime.'}
+                      {selectedAnime.description || t('catalog.no_description')}
                     </p>
                   </div>
 
@@ -677,10 +679,10 @@ const Catalog: React.FC = () => {
                       <div className="flex items-center justify-between border-b border-white/5 pb-4">
                         <h3 className="text-xl font-bold text-white flex items-center gap-3">
                           <List className="text-orange-500 w-5 h-5" />
-                          Seasons & Episodes
+                          {t('catalog.seasons_episodes')}
                         </h3>
                         <span className="text-xs font-black text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
-                          {selectedAnime.seasons.length} {selectedAnime.seasons.length === 1 ? 'Season' : 'Seasons'}
+                          {selectedAnime.seasons.length} {selectedAnime.seasons.length === 1 ? t('catalog.season_one') : t('catalog.season_other')}
                         </span>
                       </div>
 
@@ -690,7 +692,7 @@ const Catalog: React.FC = () => {
                             <div className="flex items-center gap-4 mb-4">
                               <div className="h-px flex-1 bg-gradient-to-r from-orange-500/50 to-transparent"></div>
                               <h4 className="text-sm font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                                {s.title || `Season ${s.season_number}`}
+                                {s.title || t('catalog.season_number', { number: s.season_number })}
                               </h4>
                               <div className="h-px flex-1 bg-gradient-to-l from-orange-500/50 to-transparent"></div>
                             </div>
@@ -714,13 +716,13 @@ const Catalog: React.FC = () => {
                                         {ep.episode_number}
                                       </div>
                                       <div className="truncate">
-                                        <div className="text-xs font-bold text-white truncate max-w-[200px]">{ep.title || `Episode ${ep.episode_number}`}</div>
-                                        {epStatus.is_downloaded && (
-                                          <div className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
-                                            In Library
-                                          </div>
-                                        )}
+                                          <div className="text-xs font-bold text-white truncate max-w-[200px]">{ep.title || t('catalog.episode_label', { number: ep.episode_number })}</div>
+                                          {epStatus.is_downloaded && (
+                                            <div className="text-[10px] text-orange-500 font-black uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                                              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                                              {t('catalog.in_library')}
+                                            </div>
+                                          )}
                                       </div>
                                     </div>
 
@@ -729,7 +731,7 @@ const Catalog: React.FC = () => {
                                         <button 
                                           onClick={() => startDownload(selectedAnime, ep.episode_number.toString())}
                                           className="p-2.5 rounded-xl bg-primary hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 transition-all hover:scale-105"
-                                          title="Download Episode"
+                                          title={t('catalog.download_episode')}
                                         >
                                           <Download size={14} />
                                         </button>
@@ -737,7 +739,7 @@ const Catalog: React.FC = () => {
                                         <button 
                                           onClick={() => deleteEpisode(ep.id)}
                                           className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all hover:scale-105"
-                                          title="Delete from Library"
+                                          title={t('catalog.delete_from_library')}
                                         >
                                           <Trash2 size={14} />
                                         </button>
@@ -750,7 +752,7 @@ const Catalog: React.FC = () => {
                                           ? 'bg-green-500/10 text-green-500' 
                                           : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
                                         }`}
-                                        title={epStatus.is_downloaded ? 'Mark as Undownloaded' : 'Mark as Downloaded'}
+                                        title={epStatus.is_downloaded ? t('catalog.mark_as_undownloaded') : t('catalog.mark_as_downloaded')}
                                       >
                                         <Check size={14} />
                                       </button>

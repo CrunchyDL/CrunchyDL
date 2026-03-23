@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Clock, CheckCircle2, AlertCircle, Layout, ArrowRight, Play, Trophy, User as UserIcon } from 'lucide-react';
+import { Star, Clock, CheckCircle2, AlertCircle, Layout, ArrowRight, Play, Trophy, User as UserIcon, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Dashboard = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -29,7 +31,7 @@ const Dashboard = () => {
     if (isLoading) return (
         <div className="h-[60vh] flex flex-col items-center justify-center text-primary">
             <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" />
-            <p className="text-xs font-black uppercase tracking-widest animate-pulse">Initializing Dashboard...</p>
+            <p className="text-xs font-black uppercase tracking-widest animate-pulse">{t('dashboard.initializing')}</p>
         </div>
     );
 
@@ -51,9 +53,9 @@ const Dashboard = () => {
                     )}
                     <div>
                         <h1 className="text-4xl font-black text-white tracking-tight mb-2">
-                            Welcome back, <span className="text-primary">{user?.full_name || user?.username}</span>!
+                            {t('dashboard.welcome')}, <span className="text-primary">{user?.full_name || user?.username}</span>!
                         </h1>
-                        <p className="text-gray-500 font-medium italic">{user?.bio || "Track your suggestions and discover what's new in the library."}</p>
+                        <p className="text-gray-500 font-medium italic">{user?.bio || t('dashboard.default_bio')}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4 bg-secondary/40 backdrop-blur-md p-4 rounded-3xl border border-white/5">
@@ -61,7 +63,7 @@ const Dashboard = () => {
                         <Trophy size={24} />
                     </div>
                     <div>
-                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Community Score</p>
+                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest">{t('dashboard.community_score')}</p>
                         <p className="text-xl font-black text-white">{stats.approved * 10} XP</p>
                     </div>
                 </div>
@@ -76,37 +78,37 @@ const Dashboard = () => {
                         
                         <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-8 flex items-center gap-2">
                             <Star size={16} className="text-primary" />
-                            My Contribution
+                            {t('dashboard.my_contribution')}
                         </h3>
 
                         <div className="space-y-8">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-bold text-white">Suggested Series</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Total Requests</p>
+                                    <p className="text-sm font-bold text-white">{t('dashboard.suggested_series')}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('dashboard.total_requests')}</p>
                                 </div>
                                 <span className="text-3xl font-black text-white">{stats.total}</span>
                             </div>
 
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-bold text-green-400">Approved & Added</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">In Library</p>
+                                    <p className="text-sm font-bold text-green-400">{t('dashboard.approved_added')}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('dashboard.in_library')}</p>
                                 </div>
                                 <span className="text-3xl font-black text-green-400">{stats.approved}</span>
                             </div>
 
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-bold text-orange-400">Processing</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Pending</p>
+                                    <p className="text-sm font-bold text-orange-400">{t('dashboard.processing')}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{t('dashboard.pending')}</p>
                                 </div>
                                 <span className="text-3xl font-black text-orange-400">{stats.pending}</span>
                             </div>
                         </div>
 
                         <Link to="/seasonal" className="mt-10 flex items-center justify-between group/link bg-white/5 hover:bg-white/10 p-4 rounded-2xl transition-all border border-white/5">
-                            <span className="text-xs font-black uppercase tracking-widest text-white">Keep Suggesting</span>
+                            <span className="text-xs font-black uppercase tracking-widest text-white">{t('dashboard.keep_suggesting')}</span>
                             <ArrowRight size={16} className="text-primary group-hover/link:translate-x-1 transition-transform" />
                         </Link>
                     </div>
@@ -115,11 +117,11 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <Link to="/seasonal" className="bg-secondary/20 hover:bg-secondary/40 p-6 rounded-3xl border border-white/5 transition-all text-center group">
                             <Layout size={24} className="mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white">Catalog</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white">{t('dashboard.catalog')}</span>
                         </Link>
                         <Link to="/search" className="bg-secondary/20 hover:bg-secondary/40 p-6 rounded-3xl border border-white/5 transition-all text-center group">
                             <Play size={24} className="mx-auto mb-3 text-primary group-hover:scale-110 transition-transform" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white">Search</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white">{t('dashboard.search')}</span>
                         </Link>
                     </div>
                 </div>
@@ -131,9 +133,9 @@ const Dashboard = () => {
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <Clock size={16} className="text-primary" />
-                                Recently Added to Library
+                                {t('dashboard.recent_arrivals')}
                             </h3>
-                            <Link to="/full-catalog" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">View All</Link>
+                            <Link to="/full-catalog" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">{t('dashboard.view_all')}</Link>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
@@ -147,7 +149,7 @@ const Dashboard = () => {
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                                             <Link to={`/full-catalog`} className="w-full bg-primary text-secondary py-2 rounded-xl text-[10px] font-black uppercase text-center">
-                                                Go to Series
+                                                {t('dashboard.go_to_series')}
                                             </Link>
                                         </div>
                                     </div>
@@ -157,7 +159,7 @@ const Dashboard = () => {
                             ))}
                             {(!data?.newArrivals || data.newArrivals.length === 0) && (
                                 <div className="col-span-full py-12 text-center text-gray-500 opacity-50 italic">
-                                    No new series found in the library.
+                                    {t('dashboard.no_new_series')}
                                 </div>
                             )}
                         </div>
@@ -168,9 +170,9 @@ const Dashboard = () => {
                         <div className="flex items-center justify-between mb-8">
                             <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                 <Activity size={16} className="text-primary" />
-                                Latest Episode Downloads
+                                {t('dashboard.latest_downloads')}
                             </h3>
-                            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Real-time Feed</span>
+                            <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">{t('dashboard.realtime_feed')}</span>
                         </div>
 
                         <div className="space-y-4">
@@ -183,9 +185,9 @@ const Dashboard = () => {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate max-w-[150px] sm:max-w-xs">{ep.series_title}</h4>
-                                                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">EP {ep.episode_number}</span>
+                                                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">{t('dashboard.ep') || 'EP'} {ep.episode_number}</span>
                                             </div>
-                                            <p className="text-[10px] text-gray-500 font-medium truncate max-w-[200px]">{ep.title || 'Official Episode Release'}</p>
+                                            <p className="text-[10px] text-gray-500 font-medium truncate max-w-[200px]">{ep.title || t('dashboard.official_release')}</p>
                                         </div>
                                     </div>
                                     <div className="text-right hidden sm:block">
@@ -196,7 +198,7 @@ const Dashboard = () => {
                             ))}
                             {(!data?.recentEpisodes || data.recentEpisodes.length === 0) && (
                                 <div className="py-12 text-center text-gray-500 opacity-50 italic">
-                                    No episodes have been downloaded yet.
+                                    {t('dashboard.no_episodes')}
                                 </div>
                             )}
                         </div>
@@ -208,7 +210,7 @@ const Dashboard = () => {
             <div className="bg-secondary/40 backdrop-blur-md rounded-[2.5rem] border border-white/5 p-8">
                 <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-8 flex items-center gap-2">
                     <Activity size={16} className="text-primary" />
-                    My Recent Activity
+                    {t('dashboard.my_activity')}
                 </h3>
 
                 <div className="space-y-4">
@@ -224,21 +226,15 @@ const Dashboard = () => {
                                 </div>
                              </div>
                              <div className="flex items-center gap-3">
-                                <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${
-                                    sug.status === 'approved' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                    sug.status === 'rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                    'bg-orange-500/10 text-orange-500 border-orange-500/20'
-                                }`}>
-                                    {sug.status === 'approved' ? <span className="flex items-center gap-1"><CheckCircle2 size={10} /> Approved</span> :
-                                     sug.status === 'rejected' ? <span className="flex items-center gap-1"><AlertCircle size={10} /> Rejected</span> :
-                                     <span className="flex items-center gap-1 font-black">PENDING</span>}
-                                </span>
+                                {sug.status === 'approved' ? <span className="flex items-center gap-1"><CheckCircle2 size={10} /> {t('dashboard.approved')}</span> :
+                                 sug.status === 'rejected' ? <span className="flex items-center gap-1"><AlertCircle size={10} /> {t('dashboard.rejected')}</span> :
+                                 <span className="flex items-center gap-1 font-black">{t('dashboard.pending').toUpperCase()}</span>}
                              </div>
                         </div>
                     ))}
                     {(!data?.recentSuggestions || data.recentSuggestions.length === 0) && (
                         <div className="py-8 text-center text-gray-500 opacity-50 italic">
-                            You haven't suggested any series yet.
+                            {t('dashboard.no_suggestions_yet')}
                         </div>
                     )}
                 </div>
@@ -248,6 +244,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
-// Temporary helper to fix React icons import within write_to_file
-import { Activity } from 'lucide-react';

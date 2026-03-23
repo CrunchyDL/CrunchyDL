@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Database, User, Shield, Check, Server, Save, ArrowRight, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Setup = () => {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [dbType, setDbType] = useState<'sqlite' | 'mysql'>('sqlite');
     const [config, setConfig] = useState({
@@ -30,12 +32,12 @@ const Setup = () => {
 
     const handleInstall = async () => {
         if (config.admin.password !== config.admin.confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('setup.error_passwords'));
             setStep(2);
             return;
         }
         if (config.admin.password.length < 4) {
-            setError('Password must be at least 4 characters');
+            setError(t('setup.error_password_length'));
             setStep(2);
             return;
         }
@@ -64,7 +66,7 @@ const Setup = () => {
             }
             window.location.reload(); // Reload to trigger AuthContext re-check
         } catch (err: any) {
-            setError(err.response?.data?.error || 'Installation failed');
+            setError(err.response?.data?.error || t('setup.error_install'));
             setIsInstalling(false);
         }
     };
@@ -75,8 +77,8 @@ const Setup = () => {
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">Welcome!</h2>
-                            <p className="text-muted-foreground">Select your preferred database engine to get started.</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">{t('setup.welcome')}</h2>
+                            <p className="text-muted-foreground">{t('setup.welcome_desc')}</p>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <button
@@ -85,8 +87,8 @@ const Setup = () => {
                             >
                                 <Database className={`w-10 h-10 ${dbType === 'sqlite' ? 'text-primary' : 'text-muted-foreground'}`} />
                                 <div className="text-center">
-                                    <div className="font-bold text-white">SQLite</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Simple, file-based</div>
+                                    <div className="font-bold text-white">{t('setup.sqlite')}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">{t('setup.sqlite_desc')}</div>
                                 </div>
                             </button>
                             <button
@@ -95,14 +97,14 @@ const Setup = () => {
                             >
                                 <Server className={`w-10 h-10 ${dbType === 'mysql' ? 'text-primary' : 'text-muted-foreground'}`} />
                                 <div className="text-center">
-                                    <div className="font-bold text-white">MySQL</div>
-                                    <div className="text-xs text-muted-foreground mt-1">Robust, scalable</div>
+                                    <div className="font-bold text-white">{t('setup.mysql')}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">{t('setup.mysql_desc')}</div>
                                 </div>
                             </button>
                         </div>
                         {dbType === 'sqlite' ? (
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Database Path</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.db_path')}</label>
                                 <input
                                     type="text"
                                     value={config.sqlitePath}
@@ -113,7 +115,7 @@ const Setup = () => {
                         ) : (
                             <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl">
                                 <div className="col-span-2 space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Host</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.host')}</label>
                                     <input
                                         type="text"
                                         value={config.mysql.host}
@@ -122,7 +124,7 @@ const Setup = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">User</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.user')}</label>
                                     <input
                                         type="text"
                                         value={config.mysql.user}
@@ -131,7 +133,7 @@ const Setup = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.password')}</label>
                                     <input
                                         type="password"
                                         value={config.mysql.password}
@@ -140,7 +142,7 @@ const Setup = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Database</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.db_name')}</label>
                                     <input
                                         type="text"
                                         value={config.mysql.database}
@@ -149,7 +151,7 @@ const Setup = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Port</label>
+                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.port')}</label>
                                     <input
                                         type="number"
                                         value={config.mysql.port}
@@ -163,7 +165,7 @@ const Setup = () => {
                             onClick={() => setStep(2)}
                             className="w-full bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all group"
                         >
-                            Next <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            {t('setup.continue')} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 );
@@ -171,12 +173,12 @@ const Setup = () => {
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">Account Setup</h2>
-                            <p className="text-muted-foreground">Create the initial administrator account.</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">{t('setup.account_setup')}</h2>
+                            <p className="text-muted-foreground">{t('setup.account_desc')}</p>
                         </div>
                         <div className="space-y-4">
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Username</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.username_email')}</label>
                                 <div className="flex items-center bg-black/40 border border-white/10 rounded-lg px-3 focus-within:border-primary transition-all">
                                     <User className="w-5 h-5 text-muted-foreground mr-3" />
                                     <input
@@ -189,7 +191,7 @@ const Setup = () => {
                                 </div>
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.password')}</label>
                                 <div className="flex items-center bg-black/40 border border-white/10 rounded-lg px-3 focus-within:border-primary transition-all">
                                     <Shield className="w-5 h-5 text-muted-foreground mr-3" />
                                     <input
@@ -201,7 +203,7 @@ const Setup = () => {
                                 </div>
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirm Password</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.confirm_password')}</label>
                                 <div className="flex items-center bg-black/40 border border-white/10 rounded-lg px-3 focus-within:border-primary transition-all">
                                     <Check className="w-5 h-5 text-muted-foreground mr-3" />
                                     <input
@@ -219,13 +221,13 @@ const Setup = () => {
                                 onClick={() => setStep(1)}
                                 className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-12 rounded-xl transition-all"
                             >
-                                Back
+                                {t('common.back')}
                             </button>
                             <button
                                 onClick={() => setStep(3)}
                                 className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all group"
                             >
-                                Next <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                {t('setup.continue')} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
                     </div>
@@ -234,12 +236,12 @@ const Setup = () => {
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">Metadata Providers</h2>
-                            <p className="text-muted-foreground">Optional: Configure API keys for better metadata (TMDB/TVDB).</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">{t('sidebar.library')}</h2>
+                            <p className="text-muted-foreground">{t('setup.metadata_desc')}</p>
                         </div>
                         <div className="space-y-4">
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TMDB API Key (Highly Recommended)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TMDB API Key</label>
                                 <input
                                     type="text"
                                     value={config.tmdbApiKey}
@@ -248,11 +250,11 @@ const Setup = () => {
                                     placeholder="your-tmdb-key"
                                 />
                                 <p className="text-[10px] text-muted-foreground px-1">
-                                    <span className="text-primary font-bold">Recommended:</span> It's free and used as a base for posters and info in multiple languages.
+                                    <span className="text-primary font-bold">{t('setup.sqlite')}?</span> {t('setup.tmdb_recommended')}
                                 </p>
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TVDB API Key (Optional)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TVDB API Key</label>
                                 <input
                                     type="text"
                                     value={config.tvdbApiKey}
@@ -260,10 +262,10 @@ const Setup = () => {
                                     className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-all"
                                     placeholder="your-tvdb-key"
                                 />
-                                <p className="text-[10px] text-muted-foreground px-1">Completely optional. Improves episode numbering and seasons.</p>
+                                <p className="text-[10px] text-muted-foreground px-1">{t('setup.tvdb_desc')}</p>
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Metadata Language / Region</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.meta_lang')}</label>
                                 <select
                                     value={config.metadataLanguage}
                                     onChange={(e) => setConfig({ ...config, metadataLanguage: e.target.value })}
@@ -278,7 +280,7 @@ const Setup = () => {
                                     <option value="it-IT">Italiano (Italia)</option>
                                     <option value="pt-BR">Português (Brasil)</option>
                                 </select>
-                                <p className="text-[10px] text-muted-foreground px-1">This will affect titles, descriptions and posters across all providers.</p>
+                                <p className="text-[10px] text-muted-foreground px-1">{t('setup.meta_lang_desc')}</p>
                             </div>
                         </div>
                         <div className="flex gap-4">
@@ -286,13 +288,13 @@ const Setup = () => {
                                 onClick={() => setStep(2)}
                                 className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-12 rounded-xl transition-all"
                             >
-                                Back
+                                {t('common.back')}
                             </button>
                             <button
                                 onClick={() => setStep(4)}
                                 className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all group"
                             >
-                                Next <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                {t('setup.continue')} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
                     </div>
@@ -301,12 +303,12 @@ const Setup = () => {
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">Crunchyroll Account</h2>
-                            <p className="text-muted-foreground">Optional: Connect your account to enable downloads.</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">{t('settings.account_title')}</h2>
+                            <p className="text-muted-foreground">{t('setup.account_desc')}</p>
                         </div>
                         <div className="space-y-4">
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email / Username</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.username_email')}</label>
                                 <input
                                     type="text"
                                     value={config.crEmail}
@@ -316,7 +318,7 @@ const Setup = () => {
                                 />
                             </div>
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.password')}</label>
                                 <input
                                     type="password"
                                     value={config.crPassword}
@@ -331,20 +333,20 @@ const Setup = () => {
                                 onClick={() => setStep(3)}
                                 className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-12 rounded-xl transition-all"
                             >
-                                Back
+                                {t('common.back')}
                             </button>
-                            <button
+                             <button
                                 onClick={handleInstall}
                                 disabled={isInstalling}
                                 className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                             >
                                 {isInstalling ? (
                                     <>
-                                        <Loader2 className="w-5 h-5 animate-spin" /> Installing...
+                                        <Loader2 className="w-5 h-5 animate-spin" /> {t('common.loading')}...
                                     </>
                                 ) : (
                                     <>
-                                        <Save className="w-4 h-4" /> Finish Installation
+                                        <Save className="w-4 h-4" /> {t('setup.finish')}
                                     </>
                                 )}
                             </button>
@@ -370,7 +372,7 @@ const Setup = () => {
                             <Database className="w-10 h-10 text-white -rotate-12 group-hover:rotate-0 transition-all" />
                         </div>
                         <div className="text-center">
-                            <h1 className="text-3xl font-black text-white uppercase tracking-tighter">CrunchyDL System Setup</h1>
+                            <h1 className="text-3xl font-black text-white uppercase tracking-tighter">{t('setup.system_setup')}</h1>
                             <div className="flex items-center justify-center gap-2 mt-2">
                                 <div className={`h-1.5 w-8 rounded-full transition-all ${step === 1 ? 'bg-primary' : 'bg-white/20'}`} />
                                 <div className={`h-1.5 w-8 rounded-full transition-all ${step === 2 ? 'bg-primary' : 'bg-white/20'}`} />

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { User, Mail, Shield, Camera, Save, Lock, Info, CheckCircle2, Image as ImageIcon, X } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Profile = () => {
+    const { t } = useTranslation();
     const { user, updateUser } = useAuth();
     const [formData, setFormData] = useState({
         username: user?.username || '',
@@ -57,7 +59,7 @@ const Profile = () => {
         
         // Validation for 10MB limit
         if (file.size > 10 * 1024 * 1024) {
-            setMessage({ type: 'error', text: 'Image too large (Max 10MB)' });
+            setMessage({ type: 'error', text: t('profile.error_image_size') });
             return;
         }
 
@@ -80,14 +82,14 @@ const Profile = () => {
             if (res.ok) {
                 updateUser({ ...user, avatar_url: newUrl });
                 setFormData(prev => ({ ...prev, avatar_url: newUrl }));
-                setMessage({ type: 'success', text: 'Identity visual updated!' });
+                setMessage({ type: 'success', text: t('profile.success_avatar_sync') });
                 
                 // Clear message after 3s
                 setTimeout(() => setMessage(null), 3000);
             }
         } catch (err) {
             console.error('Failed to sync avatar:', err);
-            setMessage({ type: 'error', text: 'Failed to sync avatar with server' });
+            setMessage({ type: 'error', text: t('profile.error_avatar_sync') });
         }
     };
 
@@ -154,10 +156,10 @@ const Profile = () => {
                 setFormData(prev => ({ ...prev, password: '' }));
             } else {
                 const err = await res.json();
-                setMessage({ type: 'error', text: err.error || 'Failed to update profile' });
+                setMessage({ type: 'error', text: err.error || t('profile.error_update') });
             }
         } catch (err) {
-            setMessage({ type: 'error', text: 'Network error occurred' });
+            setMessage({ type: 'error', text: t('common.error') });
         } finally {
             setIsSubmitting(false);
         }
@@ -168,9 +170,9 @@ const Profile = () => {
             <div className="mb-12">
                 <h1 className="text-4xl font-black text-white tracking-tight mb-2 flex items-center gap-3">
                     <User size={36} className="text-primary" />
-                    My Identity
+                    {t('profile.title')}
                 </h1>
-                <p className="text-gray-500 font-medium italic">Customize how others see you in the community.</p>
+                <p className="text-gray-500 font-medium italic">{t('profile.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -198,7 +200,7 @@ const Profile = () => {
                         </span>
                         
                         <p className="mt-6 text-sm text-gray-500 italic leading-relaxed">
-                            "{formData.bio || "No biography provided yet."}"
+                            "{formData.bio || t('profile.no_bio')}"
                         </p>
                     </div>
                 </div>
@@ -238,8 +240,8 @@ const Profile = () => {
 
                         <div className="space-y-4">
                             <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-widest flex items-center justify-between">
-                                <span>Profile Picture</span>
-                                {isUploading && <span className="text-primary animate-pulse italic">Uploading...</span>}
+                                <span>{t('profile.picture')}</span>
+                                {isUploading && <span className="text-primary animate-pulse italic">{t('common.loading')}</span>}
                             </label>
                             <div className="flex gap-4">
                                 <input 
@@ -247,7 +249,7 @@ const Profile = () => {
                                     value={formData.avatar_url}
                                     onChange={e => setFormData({...formData, avatar_url: e.target.value})}
                                     className="flex-1 bg-secondary/40 border border-white/5 rounded-2xl px-5 py-4 text-sm focus:border-primary outline-none transition-all text-white"
-                                    placeholder="URL or select below"
+                                    placeholder={t('profile.avatar_url_placeholder')}
                                 />
                                 <label className="bg-secondary hover:bg-accent text-white px-6 rounded-2xl flex items-center justify-center cursor-pointer border border-white/5">
                                     <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -286,7 +288,7 @@ const Profile = () => {
                                     value={formData.password}
                                     onChange={e => setFormData({...formData, password: e.target.value})}
                                     className="w-full bg-secondary/40 border border-white/5 rounded-2xl px-5 py-4 text-sm focus:border-primary outline-none transition-all text-white"
-                                    placeholder="New Password (optional)"
+                                    placeholder={t('profile.new_password_placeholder')}
                                 />
                             </div>
                             <button 
@@ -294,7 +296,7 @@ const Profile = () => {
                                 disabled={isSubmitting}
                                 className="w-full py-5 bg-primary text-secondary rounded-[2rem] font-black uppercase tracking-[0.2em] hover:scale-[1.01] transition-all"
                             >
-                                {isSubmitting ? 'Saving...' : 'Update Identity'}
+                                {isSubmitting ? t('common.loading') : t('profile.update_identity')}
                             </button>
                         </div>
                     </form>
@@ -306,7 +308,7 @@ const Profile = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-xl p-4 md:p-8">
                     <div className="bg-secondary p-6 md:p-10 rounded-[3rem] border border-white/5 w-full max-w-2xl h-[85vh] flex flex-col shadow-2xl relative">
                         <button onClick={() => setImageToCrop(null)} className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={24}/></button>
-                        <h2 className="text-xl font-black text-white mb-8">Adjust Avatar</h2>
+                        <h2 className="text-xl font-black text-white mb-8">{t('profile.adjust_avatar')}</h2>
                         <div className="relative flex-1 bg-black/40 rounded-3xl overflow-hidden mb-8">
                             <Cropper
                                 image={imageToCrop}
@@ -332,7 +334,7 @@ const Profile = () => {
                                 disabled={isUploading}
                                 className="w-full md:w-auto md:ml-auto px-10 py-4 bg-primary text-secondary rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20"
                             >
-                                {isUploading ? 'Saving...' : 'Apply Selection'}
+                                {isUploading ? t('common.loading') : t('profile.apply_selection')}
                             </button>
                         </div>
                     </div>

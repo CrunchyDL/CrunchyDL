@@ -4,8 +4,10 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const Downloads = () => {
+  const { t } = useTranslation();
   const [downloads, setDownloads] = useState<any[]>([]);
   const [avgTime, setAvgTime] = useState<number>(0);
   const { isAdmin } = useAuth();
@@ -74,13 +76,13 @@ const Downloads = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Download Queue</h1>
+          <h1 className="text-3xl font-bold">{t('downloads.title')}</h1>
           <div className="flex items-center gap-4 mt-1">
-            <p className="text-gray-400">Manage active and completed downloads.</p>
+            <p className="text-gray-400">{t('downloads.subtitle')}</p>
             {avgTime > 0 && (
               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full text-[10px] font-bold text-primary uppercase tracking-wider">
                 <RotateCw size={10} className="animate-spin-slow" />
-                Avg. Encoding: {formatSeconds(avgTime)}
+                {t('downloads.avg_encoding')}: {formatSeconds(avgTime)}
               </div>
             )}
           </div>
@@ -90,7 +92,7 @@ const Downloads = () => {
             onClick={handleClearFinished}
             className="px-4 py-2 bg-accent hover:bg-red-500/20 hover:text-red-500 border border-transparent rounded-lg transition-all flex items-center gap-2"
           >
-            <Trash2 size={18} /> Clear Finished
+            <Trash2 size={18} /> {t('downloads.clear_finished')}
           </button>
         )}
       </div>
@@ -113,7 +115,7 @@ const Downloads = () => {
               <div>
                 <h3 className="font-black text-lg text-white leading-none">{seriesName}</h3>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                  {episodes.length} EPISODES IN QUEUE • {episodes.filter((e: any) => e.status === 'completed').length} COMPLETED
+                  {episodes.length} {t('downloads.episodes_in_queue')} • {episodes.filter((e: any) => e.status === 'completed').length} {t('downloads.completed')}
                 </p>
               </div>
             </div>
@@ -141,13 +143,13 @@ const Downloads = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="text-xs font-bold text-white truncate max-w-[150px]">
-                        EPISODE {(() => {
+                        {t('catalog.episode_title', { number: (() => {
                           const m = dl.name.match(/E(\d+)/i) || dl.name.match(/Ep\s*(\d+)/i) || dl.name.match(/Episode\s*(\d+)/i);
                           return m ? m[1] : dl.id;
-                        })()} 
+                        })() }).toUpperCase()} 
                       </div>
                       <div className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter bg-white/5 px-1 rounded">
-                        {dl.status}
+                        {t('downloads.status_' + dl.status)}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 opacity-10 group-hover:opacity-100 transition-opacity">
@@ -180,7 +182,7 @@ const Downloads = () => {
                     </div>
                     <div className="flex justify-between text-[9px] text-gray-500 font-bold uppercase">
                       <span>{dl.progress}%</span>
-                      <span>{dl.triggered_by === 'AUTO_CATCH_UP' ? 'AUTO' : 'MANUAL'}</span>
+                      <span>{dl.triggered_by === 'AUTO_CATCH_UP' ? t('downloads.auto') : t('downloads.manual')}</span>
                     </div>
                   </div>
                 </div>
@@ -192,7 +194,7 @@ const Downloads = () => {
         {downloads.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-4">
             <Clock size={48} className="text-accent" />
-            <p className="font-medium">No items in the download queue.</p>
+            <p className="font-medium">{t('downloads.empty')}</p>
           </div>
         )}
       </div>
