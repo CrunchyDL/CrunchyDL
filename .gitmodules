@@ -1,0 +1,4 @@
+[submodule "backend/multi-downloader-nx"]
+	path = backend/multi-downloader-nx
+	url = https://github.com/CrunchyDL/multi-downloader-nx.git
+	branch = master
