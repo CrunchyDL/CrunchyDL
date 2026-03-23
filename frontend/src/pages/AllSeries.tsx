@@ -43,7 +43,7 @@ const AllSeries: React.FC = () => {
   const [storageData, setStorageData] = useState<any[]>([]);
   const [selectedVolume, setSelectedVolume] = useState('');
 
-  const { user, isAdmin, isCollaborator, token, isLoading } = useAuth();
+  const { user, isAdmin, isContributor, token, isLoading } = useAuth();
   
   const fetchStorage = async () => {
     try {
@@ -64,7 +64,7 @@ const AllSeries: React.FC = () => {
     if (!isLoading && token) {
       fetchCatalog(true);
       fetchSubscriptions();
-      if (isCollaborator) fetchStorage();
+      if (isContributor) fetchStorage();
     }
   }, [sort, token, isLoading]);
 
@@ -171,7 +171,7 @@ const AllSeries: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Sugerencia enviada correctamente!');
+        alert('Suggestion sent successfully!');
         setSelectedAnime(null);
       } else {
         const err = await response.json();
@@ -179,7 +179,7 @@ const AllSeries: React.FC = () => {
       }
     } catch (error) {
       console.error('Error suggesting anime:', error);
-      alert('Error de conexión');
+      alert('Connection error');
     } finally {
       setIsSuggesting(false);
     }
@@ -202,7 +202,7 @@ const AllSeries: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Descarga añadida a la cola');
+        alert('Download added to queue');
       }
     } catch (error) {
       console.error('Error starting download:', error);
@@ -334,7 +334,7 @@ const AllSeries: React.FC = () => {
                   </div>
                   <h2 className="text-3xl font-bold text-white mb-4 leading-tight">{selectedAnime.title}</h2>
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {isCollaborator && (
+                      {isContributor && (
                         <button
                           onClick={() => handleToggleSubscription()}
                           disabled={isSubscribing}
@@ -353,7 +353,7 @@ const AllSeries: React.FC = () => {
                         </button>
                       )}
 
-                      {isCollaborator && storageData.length > 0 && (
+                      {isContributor && storageData.length > 0 && (
                         <div className="flex flex-col gap-1 min-w-[180px]">
                           <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
                             <Database size={10} /> Target Volume
@@ -372,13 +372,13 @@ const AllSeries: React.FC = () => {
                         </div>
                       )}
 
-                      {isCollaborator ? (
+                      {isContributor ? (
                         <button
                           onClick={() => startDownload(selectedAnime, 'all')}
                           className="flex items-center gap-2 px-3 py-1.5 h-[38.5px] bg-gray-800 hover:bg-gray-700 border border-white/5 text-white text-xs font-bold rounded-lg transition-colors shadow-lg self-end"
                         >
                           <Download className="w-4 h-4" />
-                          DESCARGAR TODO
+                          DOWNLOAD ALL
                         </button>
                       ) : (
                         <button
@@ -387,7 +387,7 @@ const AllSeries: React.FC = () => {
                           className="flex items-center gap-2 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black rounded-lg transition-all shadow-lg shadow-orange-500/20 active:scale-95 disabled:opacity-50"
                         >
                           {isSuggesting ? <RefreshCw size={14} className="animate-spin" /> : <MessageSquare size={14} />}
-                          SUGERIR CONTENIDO
+                          SUGGEST CONTENT
                         </button>
                       )}
                     </div>

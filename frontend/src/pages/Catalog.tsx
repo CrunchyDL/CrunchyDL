@@ -61,7 +61,7 @@ const Catalog: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [episodesStatus, setEpisodesStatus] = useState<any>({});
   
-  const { user, isAdmin, isCollaborator, token, isLoading } = useAuth();
+  const { user, isAdmin, isContributor, token, isLoading } = useAuth();
   
   const fetchStorage = async () => {
     try {
@@ -84,7 +84,7 @@ const Catalog: React.FC = () => {
       else if (mode === 'browse') fetchBrowse();
       // search is triggered manually
       fetchSubscriptions();
-      if (isCollaborator) fetchStorage();
+      if (isContributor) fetchStorage();
     }
   }, [year, season, mode, token, isLoading]);
 
@@ -311,7 +311,7 @@ const Catalog: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Sugerencia enviada correctamente!');
+        alert('Suggestion sent successfully!');
         setSelectedAnime(null);
       } else {
         const err = await response.json();
@@ -319,7 +319,7 @@ const Catalog: React.FC = () => {
       }
     } catch (error) {
       console.error('Error suggesting anime:', error);
-      alert('Error de conexión al enviar sugerencia');
+      alert('Connection error while sending suggestion');
     } finally {
       setIsSuggesting(false);
     }
@@ -342,7 +342,7 @@ const Catalog: React.FC = () => {
         })
       });
       if (response.ok) {
-        alert('Descarga añadida a la cola');
+        alert('Download added to queue');
       }
     } catch (error) {
       console.error('Error starting download:', error);
@@ -368,7 +368,7 @@ const Catalog: React.FC = () => {
     });
 
     if (missingEpisodes.length === 0) {
-      alert('Todos los episodios ya están en la biblioteca!');
+      alert('All episodes are already in the library!');
       return;
     }
 
@@ -567,7 +567,7 @@ const Catalog: React.FC = () => {
                   <h2 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight break-words uppercase italic">{selectedAnime.title}</h2>
                     {/* Actions Row 1: Subscriptions and Suggestions */}
                     <div className="flex flex-wrap gap-3 mb-6">
-                      {isCollaborator && (
+                      {isContributor && (
                         <button
                           onClick={() => handleToggleSubscription()}
                           disabled={isSubscribing}
@@ -586,7 +586,7 @@ const Catalog: React.FC = () => {
                         </button>
                       )}
 
-                      {!isCollaborator && (
+                      {!isContributor && (
                         <button
                           onClick={handleSuggest}
                           disabled={isSuggesting}
@@ -599,7 +599,7 @@ const Catalog: React.FC = () => {
                     </div>
 
                     {/* Actions Row 2: Download Configuration and Execution (Collaborators Only) */}
-                    {isCollaborator && (
+                    {isContributor && (
                       <div className="bg-black/40 border border-white/5 p-6 rounded-[2rem] space-y-6 shadow-inner">
                         <div className="flex flex-col md:flex-row items-end gap-6">
                           {storageData.length > 0 && (

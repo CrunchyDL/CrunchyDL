@@ -18,7 +18,7 @@ const Suggestions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { user, token } = useAuth();
   
-  const isManager = user?.role === 'admin' || user?.role === 'colaborador';
+  const isManager = user?.role === 'admin' || user?.role === 'contributor';
 
   useEffect(() => {
     fetchSuggestions();
@@ -73,17 +73,17 @@ const Suggestions: React.FC = () => {
         <div>
           <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
             <MessageSquare className="w-10 h-10 text-orange-500" />
-            Sugerencias de la Comunidad
+            Community Suggestions
           </h1>
-          <p className="text-gray-400 mt-2 font-medium">Gestiona las peticiones de descarga de los usuarios.</p>
+          <p className="text-gray-400 mt-2 font-medium">Manage user download requests.</p>
         </div>
       </div>
 
       {suggestions.length === 0 ? (
         <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-12 text-center">
           <MessageSquare className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white">No hay sugerencias todavía</h3>
-          <p className="text-gray-400 mt-2">Las peticiones de los usuarios aparecerán aquí.</p>
+          <h3 className="text-xl font-bold text-white">No suggestions yet</h3>
+          <p className="text-gray-400 mt-2">User requests will appear here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -122,7 +122,7 @@ const Suggestions: React.FC = () => {
                 <div className="space-y-2 mt-auto">
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <User className="w-4 h-4 text-orange-500" />
-                    <span>Sugerido por: <strong className="text-gray-200">{suggestion.suggested_by}</strong></span>
+                    <span>Suggested by: <strong className="text-gray-200">{suggestion.suggested_by}</strong></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-400">
                     <Clock className="w-4 h-4 text-orange-500" />
@@ -138,14 +138,14 @@ const Suggestions: React.FC = () => {
                       className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
                     >
                       <Check className="w-5 h-5" />
-                      Aprobar
+                      Approve
                     </button>
                     <button
                       onClick={() => handleAction(suggestion.id, 'rejected')}
                       className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 font-bold py-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
                       <X className="w-5 h-5" />
-                      Rechazar
+                      Reject
                     </button>
                   </div>
                 )}
@@ -155,7 +155,7 @@ const Suggestions: React.FC = () => {
                     <p className={`text-sm font-bold ${
                       suggestion.status === 'approved' ? 'text-green-400/60' : 'text-red-400/60'
                     }`}>
-                      {suggestion.status === 'approved' ? 'Esta sugerencia fue aceptada' : 'Esta sugerencia fue rechazada'}
+                      {suggestion.status === 'approved' ? 'This suggestion was approved' : 'This suggestion was rejected'}
                     </p>
                   </div>
                 )}

@@ -111,12 +111,12 @@ const isAdmin = (req, res, next) => {
     res.status(403).json({ error: 'Requires Admin role' });
 };
 
-// Middleware to check for Collaborator or Admin role
-const isCollaborator = (req, res, next) => {
-    if (req.user && (req.user.role === 'admin' || req.user.role === 'colaborador')) {
+// Middleware to check for Contributor or Admin role
+const isContributor = (req, res, next) => {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'contributor')) {
         return next();
     }
-    res.status(403).json({ error: 'Requires Collaborator or Admin role' });
+    res.status(403).json({ error: 'Requires Contributor or Admin role' });
 };
 
 // New Middleware: Check Granular Permission

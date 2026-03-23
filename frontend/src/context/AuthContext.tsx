@@ -20,7 +20,7 @@ interface AuthContextType {
   updateUser: (data: Partial<User>) => void;
   isLoading: boolean;
   isAdmin: boolean;
-  isCollaborator: boolean;
+  isContributor: boolean;
   mustChangePassword: boolean;
   needsSetup: boolean; // New
 }
@@ -110,11 +110,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const isAdmin = user?.role === 'admin';
-  const isCollaborator = user?.role === 'admin' || user?.role === 'colaborador';
+  const isContributor = user?.role === 'admin' || user?.role === 'contributor';
   const mustChangePassword = !!user?.must_change_password;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, changePassword, updateUser, isLoading, isAdmin, isCollaborator, mustChangePassword, needsSetup }}>
+    <AuthContext.Provider value={{ user, token, login, logout, changePassword, updateUser, isLoading, isAdmin, isContributor, mustChangePassword, needsSetup }}>
       {children}
     </AuthContext.Provider>
   );

@@ -83,7 +83,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <p className="text-sm font-bold text-white">Suggested Series</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Total Peticiones</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Total Requests</p>
                                 </div>
                                 <span className="text-3xl font-black text-white">{stats.total}</span>
                             </div>
@@ -91,7 +91,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <p className="text-sm font-bold text-green-400">Approved & Added</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">En la Librería</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">In Library</p>
                                 </div>
                                 <span className="text-3xl font-black text-green-400">{stats.approved}</span>
                             </div>
@@ -99,7 +99,7 @@ const Dashboard = () => {
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
                                     <p className="text-sm font-bold text-orange-400">Processing</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">En espera</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Pending</p>
                                 </div>
                                 <span className="text-3xl font-black text-orange-400">{stats.pending}</span>
                             </div>

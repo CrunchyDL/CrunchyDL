@@ -266,7 +266,7 @@ async function setupDb(configInput = null) {
             const rolesCount = await db.get('SELECT COUNT(*) as count FROM roles');
             if (rolesCount.count === 0) {
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'admin', 'Full access');
-                await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'colaborador', 'Can manage content');
+                await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'contributor', 'Can manage content');
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'user', 'Standard user');
                 
                 const perms = [
@@ -285,7 +285,7 @@ async function setupDb(configInput = null) {
 
                 const allPerms = await db.all('SELECT id, slug FROM permissions');
                 const adminRole = await db.get('SELECT id FROM roles WHERE name = "admin"');
-                const colabRole = await db.get('SELECT id FROM roles WHERE name = "colaborador"');
+                const colabRole = await db.get('SELECT id FROM roles WHERE name = "contributor"');
                 const userRole = await db.get('SELECT id FROM roles WHERE name = "user"');
 
                 // Mapping
@@ -293,7 +293,7 @@ async function setupDb(configInput = null) {
                     // Admin gets everything
                     await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', adminRole.id, p.id);
                     
-                    // Colaborador mapping
+                    // Contributor mapping
                     if (['content:download', 'content:subscribe', 'content:suggest', 'mod:approve-suggestions', 'sys:view-storage'].includes(p.slug)) {
                         await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', colabRole.id, p.id);
                     }

@@ -7,7 +7,7 @@ const API_BASE = '/api';
 
 const Library = () => {
   const { isAdmin, user } = useAuth();
-  const isCollaborator = user?.role === 'colaborador' || user?.role === 'collaborator';
+  const isContributor = user?.role === 'contributor' || user?.role === 'collaborator';
   const [series, setSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -542,7 +542,7 @@ const Library = () => {
                         <span className="truncate">{selectedSeries.full_path || 'No local folder linked'}</span>
                       </div>
                     </div>
-                    {(isAdmin || isCollaborator) && (
+                    {(isAdmin || isContributor) && (
                       <div className="flex gap-2 shrink-0">
                         {selectedSeries.is_airing === 1 && (selectedSeries.crunchyroll_id || !selectedSeries.id.startsWith('local-')) && (
                           <button 
@@ -585,7 +585,7 @@ const Library = () => {
                     <div key={season.id} className="space-y-4">
                       <div className="flex items-center justify-between border-b border-accent pb-2">
                         <h3 className="text-xl font-bold text-primary">Season {season.season_number || '?'}: {season.title}</h3>
-                        {(isAdmin || isCollaborator) && (selectedSeries.crunchyroll_id || !selectedSeries.id.startsWith('local-')) && (
+                        {(isAdmin || isContributor) && (selectedSeries.crunchyroll_id || !selectedSeries.id.startsWith('local-')) && (
                           <div className="flex gap-2">
                              <button 
                                onClick={() => downloadMissing(season)}
