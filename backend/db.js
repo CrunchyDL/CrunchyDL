@@ -262,14 +262,6 @@ async function setupDb(configInput = null) {
             // Post-initialization (RBAC, Avatars, etc. logic)
             // ... (I'll keep the logic from the original db.js here)
             
-            // Check if admin exists
-            const admin = await db.get('SELECT id FROM users WHERE username = "admin"');
-            if (!admin && !configInput) { // Only create default if not doing a fresh install via wizard
-                const pass = process.env.ADMIN_PASSWORD || 'admin';
-                const hash = await bcrypt.hash(pass, 10);
-                await db.run('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', 'admin', hash, 'admin');
-            }
-
             // Initialize RBAC if empty
             const rolesCount = await db.get('SELECT COUNT(*) as count FROM roles');
             if (rolesCount.count === 0) {
