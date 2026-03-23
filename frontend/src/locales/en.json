@@ -19,7 +19,8 @@
     "winter": "Winter",
     "spring": "Spring",
     "summer": "Summer",
-    "fall": "Fall"
+    "fall": "Fall",
+    "create": "Create"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -247,7 +248,25 @@
     "error_delete_system_role": "System roles cannot be deleted",
     "confirm_delete_role": "Delete role {{name}}?",
     "no_atomic_perms": "No atomic permissions",
-    "stock_avatars_library": "Stock Avatars Library"
+    "stock_avatars_library": "Stock Avatars Library",
+    "tabs": {
+      "system": "System",
+      "users": "Users",
+      "activity": "Activity",
+      "roles": "Roles",
+      "avatars": "Stock Avatars"
+    },
+    "roles_management": {
+      "edit_security_role": "Edit Security Role",
+      "new_security_role": "New Security Role",
+      "role_name_placeholder": "Role Name (e.g. Moderator)",
+      "description_placeholder": "Description"
+    },
+    "avatars_management": {
+      "image_url": "Image URL",
+      "friendly_name": "Friendly Name",
+      "delete_confirm": "Delete from stock?"
+    }
   },
   "login": {
     "title": "Authentication Required",

@@ -187,11 +187,11 @@ const Admin = () => {
 
       <div className="flex flex-wrap gap-4 mb-8">
         {[
-          { id: 'system', label: 'System', icon: Database },
-          { id: 'users', label: 'Users', icon: Users },
-          { id: 'logs', label: 'Activity', icon: Activity },
-          { id: 'roles', label: 'Roles', icon: Shield },
-          { id: 'avatars', label: 'Stock Avatars', icon: ImageIcon }
+          { id: 'system', label: t('admin.tabs.system'), icon: Database },
+          { id: 'users', label: t('admin.tabs.users'), icon: Users },
+          { id: 'logs', label: t('admin.tabs.activity'), icon: Activity },
+          { id: 'roles', label: t('admin.tabs.roles'), icon: Shield },
+          { id: 'avatars', label: t('admin.tabs.avatars'), icon: ImageIcon }
         ].map(tab => (
           <button
             key={tab.id}
@@ -237,14 +237,14 @@ const Admin = () => {
           {showAddForm && (
             <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-primary/20 p-8">
               <h2 className="text-xs font-black text-primary uppercase mb-6 tracking-widest">{t('admin.new_user_account')}</h2>
-              <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <input type="text" required value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Username" />
-                <input type="text" required value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Password" />
+               <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <input type="text" required value={newUser.username} onChange={e => setNewUser({...newUser, username: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder={t('login.username')} />
+                <input type="text" required value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder={t('login.password')} />
                 <div className="flex gap-2">
                   <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as any})} className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white capitalize">
                     {roles.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
                   </select>
-                  <button type="submit" className="bg-primary text-secondary px-6 rounded-2xl font-black">Create</button>
+                  <button type="submit" className="bg-primary text-secondary px-6 rounded-2xl font-black">{t('common.create')}</button>
                 </div>
               </form>
             </div>
@@ -344,12 +344,12 @@ const Admin = () => {
           {showRoleForm && (
             <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-primary/20 p-8">
               <h2 className="text-xs font-black text-primary uppercase mb-6 tracking-widest">
-                {editingRoleId ? 'Edit Security Role' : 'New Security Role'}
+                {editingRoleId ? t('admin.roles_management.edit_security_role') : t('admin.roles_management.new_security_role')}
               </h2>
               <form onSubmit={handleCreateRole} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <input type="text" required value={newRole.name} onChange={e => setNewRole({...newRole, name: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Role Name (e.g. Moderator)" />
-                  <input type="text" value={newRole.description} onChange={e => setNewRole({...newRole, description: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder="Description" />
+                  <input type="text" required value={newRole.name} onChange={e => setNewRole({...newRole, name: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder={t('admin.roles_management.role_name_placeholder')} />
+                  <input type="text" value={newRole.description} onChange={e => setNewRole({...newRole, description: e.target.value})} className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" placeholder={t('admin.roles_management.description_placeholder')} />
                 </div>
                 
                 <div className="space-y-4">
@@ -450,7 +450,7 @@ const Admin = () => {
               <ImageIcon className="text-primary" />
               {t('admin.stock_avatars_library')}
             </h2>
-            <form 
+             <form 
               onSubmit={async (e) => {
                 e.preventDefault();
                 const res = await fetch('/api/admin/stock-avatars', {
@@ -462,8 +462,8 @@ const Admin = () => {
               }}
               className="flex flex-col md:flex-row gap-4 mb-10"
             >
-              <input type="text" required placeholder="Image URL" value={newAvatar.url} onChange={e => setNewAvatar({...newAvatar, url: e.target.value})} className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" />
-              <input type="text" placeholder="Friendly Name" value={newAvatar.name} onChange={e => setNewAvatar({...newAvatar, name: e.target.value})} className="md:w-48 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" />
+              <input type="text" required placeholder={t('admin.avatars_management.image_url')} value={newAvatar.url} onChange={e => setNewAvatar({...newAvatar, url: e.target.value})} className="flex-1 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" />
+              <input type="text" placeholder={t('admin.avatars_management.friendly_name')} value={newAvatar.name} onChange={e => setNewAvatar({...newAvatar, name: e.target.value})} className="md:w-48 bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white" />
               <button type="submit" className="bg-primary text-secondary px-8 rounded-2xl font-black uppercase tracking-widest hover:scale-105 transition-all"><Plus size={24}/></button>
             </form>
 
@@ -475,7 +475,7 @@ const Admin = () => {
                   </div>
                   <button 
                     onClick={async () => {
-                      if(confirm('Delete from stock?')) {
+                      if(confirm(t('admin.avatars_management.delete_confirm'))) {
                         await fetch(`/api/admin/stock-avatars/${avatar.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }});
                         fetchAvatars();
                       }

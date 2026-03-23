@@ -19,7 +19,8 @@
     "winter": "Invierno",
     "spring": "Primavera",
     "summer": "Verano",
-    "fall": "Otoño"
+    "fall": "Otoño",
+    "create": "Crear"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -247,7 +248,25 @@
     "error_delete_system_role": "Los roles del sistema no se pueden eliminar",
     "confirm_delete_role": "¿Eliminar rol {{name}}?",
     "no_atomic_perms": "Sin permisos atómicos",
-    "stock_avatars_library": "Librería de Avatares de Stock"
+    "stock_avatars_library": "Librería de Avatares de Stock",
+    "tabs": {
+      "system": "Sistema",
+      "users": "Usuarios",
+      "activity": "Actividad",
+      "roles": "Roles",
+      "avatars": "Avatares"
+    },
+    "roles_management": {
+      "edit_security_role": "Editar Rol de Seguridad",
+      "new_security_role": "Nuevo Rol de Seguridad",
+      "role_name_placeholder": "Nombre del Rol (ej. Moderador)",
+      "description_placeholder": "Descripción"
+    },
+    "avatars_management": {
+      "image_url": "URL de la Imagen",
+      "friendly_name": "Nombre descriptivo",
+      "delete_confirm": "¿Eliminar de la colección?"
+    }
   },
   "login": {
     "title": "Autenticación Requerida",
