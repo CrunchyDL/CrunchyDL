@@ -1,0 +1,318 @@
+const sqlite3 = require('sqlite3');
+const { open } = require('sqlite');
+const mysql = require('mysql2/promise');
+const path = require('path');
+const fs = require('fs');
+const bcrypt = require('bcryptjs');
+
+let dbInstance = null;
+let dbPromise = null;
+
+const SCHEMA = `
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(255) UNIQUE,
+        password_hash TEXT,
+        role VARCHAR(50) DEFAULT 'user',
+        full_name TEXT,
+        bio TEXT,
+        avatar_url TEXT,
+        must_change_password INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS series (
+        id VARCHAR(255) PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        image TEXT,
+        folder_name TEXT,
+        metadata_provider VARCHAR(50),
+        needs_review INTEGER DEFAULT 0,
+        mal_id INTEGER,
+        crunchyroll_id VARCHAR(255),
+        lib_path TEXT,
+        is_airing INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS seasons (
+        id VARCHAR(255) PRIMARY KEY,
+        series_id VARCHAR(255),
+        title TEXT,
+        season_number INTEGER,
+        episode_count INTEGER,
+        FOREIGN KEY (series_id) REFERENCES series(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS episodes (
+        id VARCHAR(255) PRIMARY KEY,
+        series_id VARCHAR(255),
+        season_id VARCHAR(255),
+        title TEXT,
+        episode_number DOUBLE,
+        is_downloaded INTEGER DEFAULT 0,
+        path TEXT,
+        downloaded_at DATETIME,
+        FOREIGN KEY (series_id) REFERENCES series(id),
+        FOREIGN KEY (season_id) REFERENCES seasons(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS downloads (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        name TEXT,
+        service VARCHAR(50),
+        show_id VARCHAR(255),
+        season_id VARCHAR(255),
+        season_number INTEGER,
+        episodes TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        progress INTEGER DEFAULT 0,
+        rootPath TEXT,
+        path TEXT,
+        encoding_time INTEGER,
+        triggered_by VARCHAR(255) DEFAULT 'user',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        series_id VARCHAR(255) UNIQUE,
+        title TEXT,
+        next_episode DOUBLE DEFAULT 1,
+        release_day INTEGER,
+        release_time VARCHAR(50),
+        offset_minutes INTEGER DEFAULT 20,
+        last_check_at DATETIME,
+        active INTEGER DEFAULT 1,
+        root_path TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (series_id) REFERENCES series(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS suggestions (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        user_id INTEGER,
+        series_id VARCHAR(255),
+        title TEXT,
+        image TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        user_id INTEGER,
+        username VARCHAR(255),
+        action VARCHAR(100),
+        target TEXT,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS roles (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(50) UNIQUE NOT NULL,
+        description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS permissions (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        slug VARCHAR(50) UNIQUE NOT NULL,
+        description TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS role_permissions (
+        role_id INTEGER,
+        permission_id INTEGER,
+        PRIMARY KEY (role_id, permission_id),
+        FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+        FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+        \`key\` VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS stock_avatars (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        name TEXT,
+        url VARCHAR(255) UNIQUE NOT NULL,
+        category VARCHAR(50) DEFAULT 'general',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+`;
+
+// Helper for schema normalization between SQLite and MySQL
+function normalizeSchema(sql, type) {
+    if (type === 'sqlite') {
+        return sql.replace(/AUTO_INCREMENT/g, 'AUTOINCREMENT')
+                  .replace(/VARCHAR\(\d+\)/g, 'TEXT')
+                  .replace(/DOUBLE/g, 'REAL')
+                  .replace(/\`key\`/g, 'key')
+                  .replace(/INSERT IGNORE INTO/g, 'INSERT OR IGNORE INTO');
+    } else if (type === 'mysql') {
+        return sql.replace(/INSERT OR IGNORE INTO/gi, 'INSERT IGNORE INTO')
+                  .replace(/UPDATE OR IGNORE/gi, 'UPDATE IGNORE')
+                  .replace(/INSERT OR REPLACE INTO/gi, 'REPLACE INTO')
+                  .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT');
+    }
+    return sql;
+}
+
+async function setupDb(configInput = null) {
+    if (dbInstance && !configInput) return dbInstance;
+    if (dbPromise && !configInput) return dbPromise;
+
+    dbPromise = (async () => {
+        try {
+            let config = configInput;
+            const configPath = path.join(__dirname, '..', 'data', 'config.json');
+            
+            if (!config && fs.existsSync(configPath)) {
+                config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            }
+
+            if (!config) {
+                // Return a temporary SQLite instance or handle as "not configured"
+                // For now, let's keep the legacy behavior if no config exists, but redirect to setup via middleware
+                config = { dbType: 'sqlite', path: process.env.DB_PATH || './data/database.sqlite' };
+            }
+
+            let db;
+            if (config.dbType === 'mysql') {
+                const connection = await mysql.createConnection({
+                    host: config.mysql.host,
+                    user: config.mysql.user,
+                    password: config.mysql.password,
+                    database: config.mysql.database,
+                    port: config.mysql.port || 3306,
+                    multipleStatements: true
+                });
+                
+                // Wrap MySQL connection in an "adapter" that mimics the sqlite API
+                db = {
+                    get: async (sql, ...params) => {
+                        const sanitized = params.map(p => p === undefined ? null : p);
+                        const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                        return rows[0];
+                    },
+                    all: async (sql, ...params) => {
+                        const sanitized = params.map(p => p === undefined ? null : p);
+                        const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                        return rows;
+                    },
+                    run: async (sql, ...params) => {
+                        const sanitized = params.map(p => p === undefined ? null : p);
+                        const [result] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                        return { lastID: result.insertId, changes: result.affectedRows };
+                    },
+                    exec: async (sql) => {
+                        return await connection.query(normalizeSchema(sql, 'mysql'));
+                    },
+                    close: () => connection.end()
+                };
+            } else {
+                const dbPath = process.env.DB_PATH || './data/database.sqlite';
+                const dbDir = path.dirname(path.resolve(__dirname, '..', dbPath));
+
+                if (!fs.existsSync(dbDir)) {
+                    fs.mkdirSync(dbDir, { recursive: true });
+                }
+
+                const postersDir = path.join(dbDir, 'posters');
+                if (!fs.existsSync(postersDir)) {
+                    fs.mkdirSync(postersDir, { recursive: true });
+                }
+
+                const avatarsDir = path.join(dbDir, 'avatars');
+                if (!fs.existsSync(avatarsDir)) {
+                    fs.mkdirSync(avatarsDir, { recursive: true });
+                }
+
+                db = await open({
+                    filename: path.resolve(__dirname, '..', dbPath),
+                    driver: sqlite3.Database
+                });
+
+                await db.exec('PRAGMA journal_mode = WAL;');
+                await db.exec('PRAGMA busy_timeout = 10000;');
+            }
+
+            // Create Tables
+            const normalizedSql = normalizeSchema(SCHEMA, config.dbType || 'sqlite');
+            const statements = normalizedSql.split(';').filter(s => s.trim().length > 0);
+            for (const s of statements) {
+                await db.exec(s + ';');
+            }
+
+            // Persistence directories for MySQL (SQLite handles its own above)
+            if (config.dbType === 'mysql') {
+                const baseDir = path.join(__dirname, '..', 'data');
+                ['posters', 'avatars'].forEach(subdir => {
+                    const p = path.join(baseDir, subdir);
+                    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+                });
+            }
+
+            // Post-initialization (RBAC, Avatars, etc. logic)
+            // ... (I'll keep the logic from the original db.js here)
+            
+            // Check if admin exists
+            const admin = await db.get('SELECT id FROM users WHERE username = "admin"');
+            if (!admin && !configInput) { // Only create default if not doing a fresh install via wizard
+                const pass = process.env.ADMIN_PASSWORD || 'admin';
+                const hash = await bcrypt.hash(pass, 10);
+                await db.run('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)', 'admin', hash, 'admin');
+            }
+
+            // Initialize RBAC if empty
+            const rolesCount = await db.get('SELECT COUNT(*) as count FROM roles');
+            if (rolesCount.count === 0) {
+                await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'admin', 'Full access');
+                await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'colaborador', 'Can manage content');
+                await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'user', 'Standard user');
+                const perms = [
+                    ['access:admin', 'Full administrative access'],
+                    ['content:download', 'Can trigger downloads'],
+                    ['content:subscribe', 'Can manage subscriptions'],
+                    ['content:suggest', 'Can suggest new anime'],
+                    ['mod:approve-suggestions', 'Can approve/reject suggestions'],
+                    ['sys:view-logs', 'Can view audit logs'],
+                    ['sys:manage-users', 'Can manage users and roles'],
+                    ['sys:view-storage', 'Can view system telemetry']
+                ];
+                for (const [slug, desc] of perms) { await db.run('INSERT INTO permissions (slug, description) VALUES (?, ?)', slug, desc); }
+                const adminRole = await db.get('SELECT id FROM roles WHERE name = "admin"');
+                const adminPerms = await db.all('SELECT id FROM permissions');
+                for (const p of adminPerms) { await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', adminRole.id, p.id); }
+            }
+
+            // Initial Stock Avatars
+            const stockCount = await db.get('SELECT COUNT(*) as count FROM stock_avatars');
+            if (stockCount.count === 0) {
+                const defaults = [
+                    ['Boy 1', '/avatars/stock/boy1.png', 'men'],
+                    ['Girl 1', '/avatars/stock/girl1.png', 'women'],
+                    ['Cyborg', '/avatars/stock/cyborg.png', 'sci-fi']
+                ];
+                for (const [name, url, cat] of defaults) {
+                    await db.run('INSERT INTO stock_avatars (name, url, category) VALUES (?, ?, ?)', name, url, cat);
+                }
+            }
+
+            dbInstance = db;
+            return db;
+        } catch (error) {
+            dbPromise = null;
+            throw error;
+        }
+    })();
+    return dbPromise;
+}
+
+module.exports = { setupDb };

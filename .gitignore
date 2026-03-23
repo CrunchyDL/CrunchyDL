@@ -1,0 +1,50 @@
+# Node.js
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Project Data & Persistence (Ignore locally to avoid committing large binary/security files)
+data/
+downloads/
+tmp/
+widevine/
+playready/
+*.sqlite
+*.log
+posters/
+
+# Docker
+.dockerignore
+node_modules_docker/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/Debug Scripts (Agent generated or dev scripts)
+inspect_*.js
+test-*.js
+tmp_*.json
+inspect_db.js
+
+# Specific to this repo
+backend/node_modules/
+frontend/node_modules/
+backend/dist/
+frontend/dist/
+frontend/build/
