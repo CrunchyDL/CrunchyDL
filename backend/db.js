@@ -268,6 +268,7 @@ async function setupDb(configInput = null) {
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'admin', 'Full access');
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'colaborador', 'Can manage content');
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'user', 'Standard user');
+                
                 const perms = [
                     ['access:admin', 'Full administrative access'],
                     ['content:download', 'Can trigger downloads'],
@@ -278,10 +279,30 @@ async function setupDb(configInput = null) {
                     ['sys:manage-users', 'Can manage users and roles'],
                     ['sys:view-storage', 'Can view system telemetry']
                 ];
-                for (const [slug, desc] of perms) { await db.run('INSERT INTO permissions (slug, description) VALUES (?, ?)', slug, desc); }
+                for (const [slug, desc] of perms) {
+                    await db.run('INSERT INTO permissions (slug, description) VALUES (?, ?)', slug, desc);
+                }
+
+                const allPerms = await db.all('SELECT id, slug FROM permissions');
                 const adminRole = await db.get('SELECT id FROM roles WHERE name = "admin"');
-                const adminPerms = await db.all('SELECT id FROM permissions');
-                for (const p of adminPerms) { await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', adminRole.id, p.id); }
+                const colabRole = await db.get('SELECT id FROM roles WHERE name = "colaborador"');
+                const userRole = await db.get('SELECT id FROM roles WHERE name = "user"');
+
+                // Mapping
+                for (const p of allPerms) {
+                    // Admin gets everything
+                    await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', adminRole.id, p.id);
+                    
+                    // Colaborador mapping
+                    if (['content:download', 'content:subscribe', 'content:suggest', 'mod:approve-suggestions', 'sys:view-storage'].includes(p.slug)) {
+                        await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', colabRole.id, p.id);
+                    }
+                    
+                    // User mapping
+                    if (['content:suggest'].includes(p.slug)) {
+                        await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', userRole.id, p.id);
+                    }
+                }
             }
 
             // Initial Stock Avatars
