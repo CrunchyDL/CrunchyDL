@@ -16,6 +16,7 @@ A **premium, community-driven** platform for automated anime management and down
 ### 📺 Smart Automation (Smart DL)
 - **Sub-per-Sub Catch-up**: Periodic series monitoring. Automatically detects and downloads missing episodes even for late subscriptions.
 - **Multilingual Metadata**: Choose your preferred language/region (Spanish, English, etc.) during setup for all series titles and descriptions.
+- **Native Internationalization (i18n)**: Fully localized interface in **English** and **Spanish** with automatic browser detection and persistent settings.
 - **Cross-Service Sync**: Advanced matching logic that synchronizes catalog metadata (Crunchyroll) with local library storage (AniList/Generic) to prevent duplicate downloads.
 
 ### 👥 Governance & Auditing (RBAC)
@@ -64,7 +65,7 @@ This application uses the `multi-downloader-nx` core for decryption. To enable h
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Frontend** | React 18, Vite, Vanilla CSS, Lucide Icons |
+| **Frontend** | React 18, Vite, Vanilla CSS, Lucide Icons, i18next |
 | **Backend** | Node.js, Express, Undici, FFmpeg |
 | **Database** | SQLite (default) / MySQL (optional) |
 | **Infrastructure** | Docker & Docker Compose |
