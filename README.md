@@ -4,6 +4,7 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/dokman)
 
 A **premium, community-driven** platform for automated anime management and downloading. Built with a modern, high-performance architecture and a stunning user interface.
 
@@ -69,6 +70,14 @@ This application uses the `multi-downloader-nx` core for decryption. To enable h
 | **Backend** | Node.js, Express, Undici, FFmpeg |
 | **Database** | SQLite (default) / MySQL (optional) |
 | **Infrastructure** | Docker & Docker Compose |
+
+---
+
+## ☕ Support the Project
+
+If you like the project and want to support its development, you can buy me a coffee:
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/dokman)
 
 ---
 
