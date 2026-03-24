@@ -33,7 +33,7 @@ RUN npm rebuild sqlite3 --build-from-source
 COPY backend/multi-downloader-nx ./multi-downloader-nx
 # Install multi-downloader-nx dependencies and build
 WORKDIR /app/backend/multi-downloader-nx
-RUN npm install
+RUN npm install --legacy-peer-deps
 RUN npm run tsc false false
 
 # Copy backend source (excluding node_modules via .dockerignore)

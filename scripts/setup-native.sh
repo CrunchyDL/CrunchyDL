@@ -44,7 +44,7 @@ npm install
 # 5. Submodule Backend Setup
 echo "🏗️ Building multi-downloader-nx..."
 cd multi-downloader-nx
-npm install
+npm install --legacy-peer-deps
 npm run tsc false false
 cd ..
 

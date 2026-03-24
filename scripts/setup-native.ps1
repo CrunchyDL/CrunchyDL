@@ -42,7 +42,7 @@ npm install
 # 5. Submodule Backend Setup
 Write-Host "🏗️ Building multi-downloader-nx..." -ForegroundColor Yellow
 Set-Location multi-downloader-nx
-npm install
+npm install --legacy-peer-deps
 npm run tsc false false
 Set-Location ..
 
