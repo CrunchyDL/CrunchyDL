@@ -969,7 +969,7 @@ app.post('/api/config/metadata-language', authenticate, hasPermission('sys:manag
     try {
         const { language } = req.body;
         const db = await setupDb();
-        await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 'metadata_language', language);
+        await db.run('INSERT OR REPLACE INTO settings (`key`, value) VALUES (?, ?)', 'metadata_language', language);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
