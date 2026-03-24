@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutGrid, 
   Search, 
@@ -43,6 +43,14 @@ const Sidebar = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const { isAdmin, user, logout } = useAuth();
+  const [version, setVersion] = useState<string>('');
+
+  useEffect(() => {
+    fetch('/api/version')
+      .then(res => res.json())
+      .then(data => setVersion(data.version))
+      .catch(err => console.error('Error fetching version:', err));
+  }, []);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -55,8 +63,11 @@ const Sidebar = () => {
           <DownloadCloud size={24} className="text-background" />
         </div>
         <div>
-          <h1 className="text-lg font-black tracking-tighter uppercase leading-none">Crunchy<span className="text-primary">DL</span></h1>
-          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{t('sidebar.mode', { role: t('sidebar.role_' + (user?.role || 'user').toLowerCase()) })}</div>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-lg font-black tracking-tighter uppercase leading-none">Crunchy<span className="text-primary">DL</span></h1>
+            {version && <span className="text-[10px] font-black text-white/20 bg-white/5 px-1.5 py-0.5 rounded-md leading-none mb-0.5">v{version}</span>}
+          </div>
+          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none mt-1">{t('sidebar.mode', { role: t('sidebar.role_' + (user?.role || 'user').toLowerCase()) })}</div>
         </div>
       </div>
 

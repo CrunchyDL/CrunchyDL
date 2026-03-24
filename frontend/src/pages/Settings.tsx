@@ -624,7 +624,7 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
 );
 };
 
-const SystemSection = ({ systemInfo, appVersion }: any) => {
+const SystemSection = ({ systemInfo, versions }: any) => {
   const { t } = useTranslation();
   return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
@@ -676,8 +676,8 @@ const SystemSection = ({ systemInfo, appVersion }: any) => {
                 </div>
             </div>
             <div className="text-right">
-                <div className="text-sm font-black text-primary uppercase tracking-widest">v1.2.0</div>
-                <div className="text-[10px] text-green-500 font-bold uppercase tracking-tighter">{t('settings.up_to_date')}</div>
+                <div className="text-sm font-black text-primary uppercase tracking-widest">v{versions?.version || '...'}</div>
+                <div className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Core v{versions?.coreVersion || '...'}</div>
             </div>
         </div>
     </div>
@@ -701,6 +701,7 @@ const Settings = () => {
   const [saved, setSaved] = useState(false);
   const [authStatus, setAuthStatus] = useState<any>(null);
   const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [versions, setVersions] = useState<any>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [credentials, setCredentials] = useState({ username: '', password: '', token: '' });
   const [loggingIn, setLoggingIn] = useState(false);
@@ -709,14 +710,16 @@ const Settings = () => {
     const fetchData = async () => {
         const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
         try {
-            const [cfg, auth, sys] = await Promise.all([
+            const [cfg, auth, sys, ver] = await Promise.all([
                 fetch('/api/config/muxing', { headers }).then(r => r.json()),
                 fetch('/api/auth/status', { headers }).then(r => r.json()),
-                fetch('/api/system/info', { headers }).then(r => r.json())
+                fetch('/api/system/info', { headers }).then(r => r.json()),
+                fetch('/api/version').then(r => r.json())
             ]);
             setConfig(cfg);
             setAuthStatus(auth);
             setSystemInfo(sys);
+            setVersions(ver);
         } catch (err) {
             console.error('Error fetching settings data:', err);
         }
@@ -872,6 +875,7 @@ const Settings = () => {
         {currentTab === 'system' && (
             <SystemSection 
                 systemInfo={systemInfo}
+                versions={versions}
             />
         )}
       </div>

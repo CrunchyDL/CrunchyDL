@@ -12,6 +12,11 @@ const path = require('path');
 const fs = require('fs');
 const { setupDb } = require('./db');
 const CliService = require('./services/cli');
+const packageJson = require('./package.json');
+const corePackageJson = require('./multi-downloader-nx/package.json');
+
+const appVersion = packageJson.version;
+const coreVersion = corePackageJson.version;
 const libraryService = require('./services/library');
 const catalogService = require('./services/catalog');
 const ConfigService = require('./services/config');
@@ -82,6 +87,7 @@ const authenticate = (req, res, next) => {
     // Since this middleware is used with app.use('/api', authenticate),
     // the req.path is relative to /api (e.g., /auth/login, /stock-avatars)
     if (req.path === '/health' ||
+        req.path === '/api/version' ||
         req.path === '/auth/login' ||
         req.path === '/setup/status' ||
         req.path === '/setup/install' ||
@@ -827,6 +833,14 @@ app.post('/api/downloads/clear-finished', authenticate, hasPermission('sys:manag
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// Versioning
+app.get('/api/version', (req, res) => {
+    res.json({ 
+        version: appVersion, 
+        coreVersion: coreVersion 
+    });
 });
 
 app.get('/health', (req, res) => {
