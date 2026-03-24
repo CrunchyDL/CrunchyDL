@@ -725,7 +725,7 @@ const SystemSection = ({ systemInfo, versions }: any) => {
 };
 
 const Settings = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [currentTab, setCurrentTab] = useState<'account' | 'downloads' | 'library' | 'system'>('account');
   const [config, setConfig] = useState<any>(null);
   const [metadataLanguage, setMetadataLanguage] = useState('en-US');
@@ -850,7 +850,7 @@ const Settings = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="space-y-1">
           <h1 className="text-4xl font-black text-white tracking-tight">
-            {useTranslation().i18n.language.startsWith('en') ? (
+            {i18n.language.startsWith('en') ? (
               <><span className="text-primary">CrunchyDL</span> {t('settings.title')}</>
             ) : (
               <>{t('settings.title')} <span className="text-primary">CrunchyDL</span></>
