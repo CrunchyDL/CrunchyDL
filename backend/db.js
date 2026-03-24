@@ -161,6 +161,7 @@ function normalizeSchema(sql, type) {
         return sql.replace(/INSERT OR IGNORE INTO/gi, 'INSERT IGNORE INTO')
                   .replace(/UPDATE OR IGNORE/gi, 'UPDATE IGNORE')
                   .replace(/INSERT OR REPLACE INTO/gi, 'REPLACE INTO')
+                  .replace(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, 'CREATE $1 INDEX $2 ON $3')
                   .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT');
     }
     return sql;
@@ -249,7 +250,24 @@ async function setupDb(configInput = null) {
             const normalizedSql = normalizeSchema(SCHEMA, config.dbType || 'sqlite');
             const statements = normalizedSql.split(';').filter(s => s.trim().length > 0);
             for (const s of statements) {
-                await db.exec(s + ';');
+                try {
+                    await db.exec(s + ';');
+                } catch (e) {
+                    // Ignore "already exists" errors during initialization
+                    const msg = e.message.toLowerCase();
+                    if (msg.includes('already exists') || msg.includes('duplicate key') || msg.includes('duplicate column') || msg.includes('duplicate entry')) {
+                        continue;
+                    }
+                    // MySQL specific duplicate index/table errors
+                    if (e.code === 'ER_DUP_KEYNAME' || e.code === 'ER_TABLE_EXISTS_ERROR' || e.code === 'ER_DUP_FIELDNAME') {
+                        continue;
+                    }
+                    console.error(`[DB] Error executing statement: ${s.substring(0, 50)}...`, e.message);
+                    // For critical errors we might want to throw, but for schema migration we often want to continue
+                    if (msg.includes('syntax error') || e.code === 'ER_PARSE_ERROR') {
+                        throw e;
+                    }
+                }
             }
 
             // Persistence directories for MySQL (SQLite handles its own above)
