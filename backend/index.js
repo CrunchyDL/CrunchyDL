@@ -956,7 +956,7 @@ app.post('/api/config/muxing', authenticate, hasPermission('sys:manage-users'), 
 app.get('/api/config/metadata-language', authenticate, async (req, res) => {
     try {
         const db = await setupDb();
-        const setting = await db.get('SELECT value FROM settings WHERE key = ?', 'metadata_language');
+        const setting = await db.get('SELECT value FROM settings WHERE `key` = ?', 'metadata_language');
         res.json({ language: setting ? setting.value : 'en-US' });
     } catch (err) {
         res.status(500).json({ error: err.message });

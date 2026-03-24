@@ -11,13 +11,14 @@ class CatalogService {
   constructor() {
     this.tokenFilePath = path.join(__dirname, '..', 'multi-downloader-nx', 'config', 'cr_token.yml');
     this.apiBase = 'https://beta-api.crunchyroll.com';
+    this.refreshPromise = null;
     this.cmsData = null;
   }
 
   async getMetadataLocale() {
     try {
       const db = await setupDb();
-      const row = await db.get('SELECT value FROM settings WHERE key = ?', 'metadata_language');
+      const row = await db.get('SELECT value FROM settings WHERE `key` = ?', 'metadata_language');
       return row?.value || 'en-US';
     } catch (e) {
       return 'en-US';
@@ -48,29 +49,29 @@ class CatalogService {
 
       let fileContents = fs.readFileSync(this.tokenFilePath, 'utf8');
       let data = yaml.load(fileContents);
-      
+
       // Check for expiry (proactive refresh if within 30 seconds)
       const now = new Date();
       const expiry = data.expires ? new Date(data.expires) : null;
-      
+
       if (expiry && (expiry.getTime() - now.getTime() < 30 * 1000)) {
         if (this.refreshPromise) {
-            console.log('Token refresh already in progress, waiting...');
-            await this.refreshPromise;
+          console.log('Token refresh already in progress, waiting...');
+          await this.refreshPromise;
         } else {
-            console.log('Token near expiry or expired, refreshing...');
-            if (!data.refresh_token) {
-                this.refreshPromise = this.doAnonymousAuth();
-            } else {
-                this.refreshPromise = this.refreshToken();
-            }
-            try {
-                await this.refreshPromise;
-            } finally {
-                this.refreshPromise = null;
-            }
+          console.log('Token near expiry or expired, refreshing...');
+          if (!data.refresh_token) {
+            this.refreshPromise = this.doAnonymousAuth();
+          } else {
+            this.refreshPromise = this.refreshToken();
+          }
+          try {
+            await this.refreshPromise;
+          } finally {
+            this.refreshPromise = null;
+          }
         }
-        
+
         // Final read after refresh
         if (fs.existsSync(this.tokenFilePath)) {
           fileContents = fs.readFileSync(this.tokenFilePath, 'utf8');
@@ -90,10 +91,10 @@ class CatalogService {
     if (!data) return { authenticated: false, type: 'none' };
     const isUser = !!data.refresh_token;
     return {
-        authenticated: true,
-        type: isUser ? 'user' : 'guest',
-        username: data.username || (isUser ? 'Premium User' : 'Anonymous Guest'),
-        expires: data.expires
+      authenticated: true,
+      type: isUser ? 'user' : 'guest',
+      username: data.username || (isUser ? 'Premium User' : 'Anonymous Guest'),
+      expires: data.expires
     };
   }
 
@@ -104,7 +105,7 @@ class CatalogService {
         const db = await setupDb();
         const emailRow = await db.get('SELECT value FROM settings WHERE `key` = ?', 'crunchyroll_email');
         const passRow = await db.get('SELECT value FROM settings WHERE `key` = ?', 'crunchyroll_password');
-        
+
         if (emailRow?.value && passRow?.value) {
           console.log('[Catalog] Found stored credentials, attempting automatic login...');
           try {
@@ -124,9 +125,9 @@ class CatalogService {
 
       // 2. Anonymous Auth (Guest)
       // Updated credentials from multi-downloader-nx/modules/module.api-urls.ts
-      const basic = 'bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI='; 
+      const basic = 'bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI=';
       const userAgent = 'Crunchyroll/ANDROIDTV/3.58.0_22336 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)';
-      
+
       const uuid = require('crypto').randomUUID();
       const decoded = Buffer.from(basic, 'base64').toString('utf8');
       const authData = new URLSearchParams({
@@ -174,7 +175,7 @@ class CatalogService {
       }
       const fileContents = fs.readFileSync(this.tokenFilePath, 'utf8');
       const tokenData = yaml.load(fileContents);
-      
+
       if (!tokenData || !tokenData.refresh_token) {
         throw new Error('No refresh token available');
       }
@@ -208,7 +209,7 @@ class CatalogService {
       const newTokenData = response.data;
       newTokenData.device_id = uuid;
       newTokenData.expires = new Date(Date.now() + newTokenData.expires_in * 1000);
-      
+
       // Preserve username if it was there
       if (tokenData.username) {
         newTokenData.username = tokenData.username;
@@ -227,7 +228,7 @@ class CatalogService {
     const { username, password, token } = credentials;
     const { spawn } = require('child_process');
     const cliPath = path.resolve(__dirname, '..', 'multi-downloader-nx', 'lib', 'index.js');
-    
+
     return new Promise((resolve, reject) => {
       const args = ['--service', 'crunchy'];
       if (token) {
@@ -241,7 +242,7 @@ class CatalogService {
       const child = spawn('node', [cliPath, ...args], {
         env: { ...process.env, contentDirectory: path.resolve(__dirname, '..', 'multi-downloader-nx') }
       });
-      
+
       let output = '';
       child.stdout.on('data', (data) => {
         const str = data.toString();
@@ -268,7 +269,7 @@ class CatalogService {
   async _getCmsCredentials() {
     const now = new Date();
     if (this.cmsData && this.cmsData.expires && new Date(this.cmsData.expires) > now) {
-        return this.cmsData;
+      return this.cmsData;
     }
 
     console.log('[Catalog] Fetching fresh CMS credentials...');
@@ -324,7 +325,7 @@ class CatalogService {
 
   async getSeasonalCatalog(year, season) {
     const seasonTag = `${season.toLowerCase()}-${year}`;
-    
+
     try {
       const locale = await this.getMetadataLocale();
 
@@ -342,7 +343,7 @@ class CatalogService {
       console.log(`[Catalog] Successfully fetched ${items.length} items from Crunchyroll.`);
 
       const enrichedItems = items.map(item => ({
-        id: item.id, 
+        id: item.id,
         title: item.title,
         description: item.description,
         image: item.images?.poster_tall?.[0]?.[Math.floor(item.images.poster_tall[0].length / 2)]?.source || '/notFound.png',
@@ -376,7 +377,7 @@ class CatalogService {
       console.log(`[Catalog] Successfully fetched ${items.length} browse items.`);
 
       const enrichedItems = items.map(item => ({
-        id: item.id, 
+        id: item.id,
         title: item.title,
         description: item.description,
         image: item.images?.poster_tall?.[0]?.[Math.floor(item.images.poster_tall[0].length / 2)]?.source || '/notFound.png',
@@ -398,16 +399,16 @@ class CatalogService {
       const cms = await this._getCmsCredentials();
 
       const seasonsResponse = await this._request('get', `${this.apiBase}/content/v2/cms/series/${seriesId}/seasons`, {
-        params: { 
-            locale: locale,
-            Policy: cms.policy,
-            Signature: cms.signature,
-            'Key-Pair-Id': cms.key_pair_id
+        params: {
+          locale: locale,
+          Policy: cms.policy,
+          Signature: cms.signature,
+          'Key-Pair-Id': cms.key_pair_id
         }
       });
 
       const seasons = seasonsResponse.data.data;
-      
+
       return {
         id: seriesId,
         seasons: seasons.map(s => ({
@@ -430,11 +431,11 @@ class CatalogService {
       const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
       const response = await this._request('get', `${this.apiBase}/content/v2/cms/seasons/${seasonId}/episodes`, {
-        params: { 
-            locale: locale,
-            Policy: cms.policy,
-            Signature: cms.signature,
-            'Key-Pair-Id': cms.key_pair_id
+        params: {
+          locale: locale,
+          Policy: cms.policy,
+          Signature: cms.signature,
+          'Key-Pair-Id': cms.key_pair_id
         }
       });
 
@@ -485,11 +486,11 @@ class CatalogService {
       const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
       const response = await this._request('get', `${this.apiBase}/content/v2/cms/series/${seriesId}`, {
-        params: { 
-            locale: locale,
-            Policy: cms.policy,
-            Signature: cms.signature,
-            'Key-Pair-Id': cms.key_pair_id
+        params: {
+          locale: locale,
+          Policy: cms.policy,
+          Signature: cms.signature,
+          'Key-Pair-Id': cms.key_pair_id
         }
       });
 
@@ -510,7 +511,7 @@ class CatalogService {
 
   async _enrichWithLibraryStatus(items) {
     if (!items || items.length === 0) return items;
-    
+
     try {
       const db = await setupDb();
       // Get all local series IDs

@@ -157,7 +157,7 @@ class LibraryService {
             const queryName = searchQuery || (series ? series.title : folderName);
             const muxConfig = await this.configService.getMuxingConfig();
             const providers = muxConfig.metadataProviders || ['crunchy', 'anilist'];
-            const metadataLang = await this.db.get('SELECT value FROM settings WHERE key = ?', 'metadata_language');
+            const metadataLang = await this.db.get('SELECT value FROM settings WHERE `key` = ?', 'metadata_language');
             const searchResults = await metadataHub.search(queryName, {
                 providers, 
                 minConfidence: muxConfig.minMetadataConfidence || 0.7,

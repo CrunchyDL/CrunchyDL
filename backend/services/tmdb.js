@@ -12,7 +12,7 @@ class TmdbService {
         // 2. Lookup in secure settings table if DB is provided
         if (db) {
             try {
-                const setting = await db.get('SELECT value FROM settings WHERE key = "tmdb_api_key"');
+                const setting = await db.get('SELECT value FROM settings WHERE `key` = "tmdb_api_key"');
                 if (setting) return setting.value;
             } catch (err) {
                 console.error('[TMDB] Error fetching API Key from DB:', err.message);
