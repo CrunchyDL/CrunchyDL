@@ -81,7 +81,12 @@ bash scripts/setup-native.sh
 5.  **Submodule Build**: `cd backend/multi-downloader-nx && npm install && npm run tsc false false`
 6.  **Start Server**: `cd backend && node index.js`
 
-Visit `http://localhost:3001` to complete the setup.
+### 🏃 Quick Start (Post-Setup)
+Once the setup is complete, you can start the server using the launchers in the root directory:
+- **Windows**: Double-click `run-windows.bat`
+- **Linux**: Run `bash run-linux.sh`
+
+Visit `http://localhost:3001` to use the application.
 
 ---
 
