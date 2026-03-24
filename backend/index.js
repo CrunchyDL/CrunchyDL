@@ -169,6 +169,11 @@ async function addAuditLog(req, action, target, details = null) {
     }
 }
 
+// Serve static frontend in production
+if (process.env.NODE_ENV === 'production' || true) {
+    app.use(express.static(path.join(__dirname, 'public')));
+}
+
 // Apply authentication to all /api routes except login
 app.use('/api', authenticate);
 app.use(morgan('dev'));
@@ -340,10 +345,7 @@ app.delete('/api/admin/users/:id', authenticate, hasPermission('sys:manage-users
     }
 });
 
-// Serve static frontend in production
-if (process.env.NODE_ENV === 'production' || true) {
-    app.use(express.static(path.join(__dirname, 'public')));
-}
+
 
 // System Info
 app.get('/api/system/info', (req, res) => {
