@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo.svg" width="250" alt="CrunchyDL Logo">
+</p>
+
 # 🚀 CrunchyDL 
 
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
