@@ -703,7 +703,7 @@ const SystemSection = ({ systemInfo, versions }: any) => {
                 </div>
                 <div>
                     <div className="font-bold text-white">{t('settings.software_version')}</div>
-                    <div className="text-xs text-gray-500">{t('settings.core_desc')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.core_desc')}</div>
                 </div>
             </div>
             <div className="text-right">
@@ -849,7 +849,7 @@ const Settings = () => {
     <div className="max-w-4xl mx-auto pb-24 font-sans animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-white tracking-tight">{t('settings.title').split(' ')[0]} <span className="text-primary">{t('settings.title').split(' ')[1]}</span></h1>
+          <h1 className="text-4xl font-black text-white tracking-tight">{t('settings.title')} <span className="text-primary">CrunchyDL</span></h1>
           <p className="text-gray-500 font-medium">{t('settings.subtitle')}</p>
         </div>
         <button

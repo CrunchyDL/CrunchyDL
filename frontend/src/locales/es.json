@@ -318,7 +318,7 @@
     "error_image_size": "Imagen demasiado grande (Máx 10MB)"
   },
   "settings": {
-    "title": "Ajustes de la App",
+    "title": "Ajustes de",
     "subtitle": "Configura tu cuenta, el motor de muxing y las preferencias del sistema.",
     "account_title": "Cuenta de Crunchyroll",
     "logged_in_as": "Sesión iniciada como {{username}}",
