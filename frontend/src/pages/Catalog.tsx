@@ -32,6 +32,7 @@ interface Anime {
   seasons?: any[];
   lib_path?: string;
   folder_name?: string;
+  in_library?: boolean;
 }
 
 interface Subscription {
@@ -515,6 +516,12 @@ const Catalog: React.FC = () => {
                           {t('catalog.view_details')}
                         </button>
                       </div>
+
+                      {anime.in_library && (
+                        <div className="absolute top-2 left-2 bg-green-500 text-white p-1.5 rounded-full shadow-lg z-10 border border-white/20 animate-in zoom-in duration-300">
+                          <Check className="w-3 h-3" strokeWidth={4} />
+                        </div>
+                      )}
                       
                       {/* Subscription Status on card */}
                       <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -544,6 +551,12 @@ const Catalog: React.FC = () => {
                       <h3 className="text-sm font-semibold text-white line-clamp-2 leading-tight group-hover:text-orange-500 transition-colors">
                         {anime.title}
                       </h3>
+                      {anime.in_library && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                          <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">{t('catalog.in_library_short') || 'Library'}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

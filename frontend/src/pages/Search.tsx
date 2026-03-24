@@ -9,6 +9,7 @@ interface Anime {
   image: string;
   description: string;
   is_simulcast?: boolean;
+  in_library?: boolean;
 }
 
 interface SeasonDetails {
@@ -260,6 +261,11 @@ const Search = () => {
                   alt={anime.title}
                   className="w-full h-full object-cover group-hover:opacity-40 transition-opacity"
                 />
+                {anime.in_library && (
+                  <div className="absolute top-2 right-2 bg-green-500 text-white p-1.5 rounded-full shadow-lg z-10 border border-white/20 animate-in zoom-in duration-300">
+                    <Check className="w-3 h-3" strokeWidth={4} />
+                  </div>
+                )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="bg-orange-600 p-3 rounded-full shadow-xl">
                     <Info className="w-6 h-6 text-white" />
@@ -272,6 +278,12 @@ const Search = () => {
                 </h3>
                 {service === 'anilist' && (
                   <div className="mt-1 text-[10px] text-blue-400 font-mono uppercase tracking-tighter">{t('search.anilist_mal_short')}</div>
+                )}
+                {anime.in_library && (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                    <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">{t('search.in_library_short') || 'Library'}</span>
+                  </div>
                 )}
               </div>
             </div>

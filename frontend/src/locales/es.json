@@ -78,7 +78,8 @@
     "anilist_mal_short": "AniList / MAL",
     "remove_from_archive": "Quitar del archivo",
     "mark_as_owned": "Marcar como tenido (Archivo)",
-    "delete_physical": "Eliminar archivo físico"
+    "delete_physical": "Eliminar archivo físico",
+    "in_library_short": "Librería"
   },
   "catalog": {
     "seasonal": "Temporada",
@@ -131,7 +132,8 @@
     "suggestion_success": "¡Sugerencia enviada correctamente!",
     "suggestion_error": "Error: {{error}}",
     "suggestion_conn_error": "Error de conexión al enviar la sugerencia",
-    "all_in_library": "¡Todos los episodios ya están en la biblioteca!"
+    "all_in_library": "¡Todos los episodios ya están en la biblioteca!",
+    "in_library_short": "Librería"
   },
   "all_series": {
     "title_main": "Catálogo",

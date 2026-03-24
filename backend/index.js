@@ -396,6 +396,24 @@ app.get('/api/catalog/season/:id/episodes', async (req, res) => {
     }
 });
 
+app.post('/api/search', authenticate, async (req, res) => {
+    const { service, query } = req.body;
+    try {
+        let results = [];
+        if (service === 'crunchy') {
+            results = await catalogService.searchSeries(query);
+        } else if (service === 'anilist') {
+            results = await anilistService.searchSeries(query);
+        } else {
+            results = await catalogService.searchSeries(query);
+        }
+        res.json(results);
+    } catch (e) {
+        console.error('Search error:', e);
+        res.status(500).json({ error: 'Failed to perform search' });
+    }
+});
+
 // NEW: Missing Catalog routes for Web UI
 app.get('/api/catalog/browse', authenticate, async (req, res) => {
     const { sort, n, start } = req.query;

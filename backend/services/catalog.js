@@ -333,7 +333,7 @@ class CatalogService {
       const items = response.data.data || [];
       console.log(`[Catalog] Successfully fetched ${items.length} items from Crunchyroll.`);
 
-      return items.map(item => ({
+      const enrichedItems = items.map(item => ({
         id: item.id, 
         title: item.title,
         description: item.description,
@@ -342,6 +342,8 @@ class CatalogService {
         is_simulcast: item.series_metadata?.is_simulcast || false,
         availability_notes: item.series_metadata?.availability_notes || ''
       }));
+
+      return await this._enrichWithLibraryStatus(enrichedItems);
     } catch (e) {
       console.error(`[Catalog] Error fetching catalog for ${seasonTag}:`, e.response?.data || e.message);
       throw e;
@@ -366,7 +368,7 @@ class CatalogService {
       const items = response.data.data || [];
       console.log(`[Catalog] Successfully fetched ${items.length} browse items.`);
 
-      return items.map(item => ({
+      const enrichedItems = items.map(item => ({
         id: item.id, 
         title: item.title,
         description: item.description,
@@ -375,6 +377,8 @@ class CatalogService {
         is_simulcast: item.series_metadata?.is_simulcast || false,
         availability_notes: item.series_metadata?.availability_notes || ''
       }));
+
+      return await this._enrichWithLibraryStatus(enrichedItems);
     } catch (e) {
       console.error(`[Catalog] Error fetching browse catalog:`, e.response?.data || e.message);
       throw e;
@@ -456,12 +460,14 @@ class CatalogService {
       });
 
       const items = response.data.data?.[0]?.items || [];
-      return items.map(item => ({
+      const enrichedItems = items.map(item => ({
         id: item.id,
         title: item.title,
         description: item.description,
         image: item.images?.poster_tall?.[0]?.[Math.floor(item.images.poster_tall[0].length / 2)]?.source || '/notFound.png'
       }));
+
+      return await this._enrichWithLibraryStatus(enrichedItems);
     } catch (e) {
       console.error('Error searching series:', e.response?.data || e.message);
       return [];
@@ -492,6 +498,26 @@ class CatalogService {
     } catch (e) {
       console.error('Error fetching series info:', e.message);
       return null;
+    }
+  }
+
+  async _enrichWithLibraryStatus(items) {
+    if (!items || items.length === 0) return items;
+    
+    try {
+      const db = await setupDb();
+      // Get all local series IDs
+      const localSeries = await db.all('SELECT crunchyroll_id, id FROM series');
+      const localCrIds = new Set(localSeries.map(s => s.crunchyroll_id).filter(id => !!id));
+      const localInternalIds = new Set(localSeries.map(s => s.id));
+
+      return items.map(item => ({
+        ...item,
+        in_library: localCrIds.has(item.id) || localInternalIds.has(item.id)
+      }));
+    } catch (err) {
+      console.error('[Catalog] Error enriching with library status:', err.message);
+      return items;
     }
   }
 }
