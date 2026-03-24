@@ -51,6 +51,40 @@ A **premium, community-driven** platform for automated anime management and down
 
 ---
 
+## 💻 Native Installation (Non-Docker)
+
+If you prefer to run the application directly on your host system (Windows or Linux) without Docker, follow these steps:
+
+### 1. Prerequisites
+- **Node.js**: v18 or later.
+- **FFmpeg**: Must be installed and in your system's PATH.
+- **Git**: For cloning and submodules.
+
+### 2. Automatic Setup
+We provide helper scripts to automate the build and dependency installation:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\setup-native.ps1
+```
+
+**Linux (Bash):**
+```bash
+bash scripts/setup-native.sh
+```
+
+### 3. Manual Build (If needed)
+1.  **Initialize Submodules**: `git submodule update --init --recursive`
+2.  **Frontend Build**: `cd frontend && npm install && npm run build`
+3.  **Prepare Backend**: Copy `frontend/dist/*` to `backend/public/`
+4.  **Backend Setup**: `cd backend && npm install`
+5.  **Submodule Build**: `cd backend/multi-downloader-nx && npm install && npm run tsc false false`
+6.  **Start Server**: `cd backend && node index.js`
+
+Visit `http://localhost:3001` to complete the setup.
+
+---
+
 ## 🔐 DRM & CDM Configuration
 
 This application uses the `multi-downloader-nx` core for decryption. To enable high-quality downloading (1080p+), you must provide your own CDM (Content Decryption Module) files.
