@@ -42,8 +42,10 @@ const SCHEMA = `
         title TEXT,
         season_number INTEGER,
         episode_count INTEGER,
+        UNIQUE(series_id, season_number),
         FOREIGN KEY (series_id) REFERENCES series(id)
     );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_seasons_series_number ON seasons(series_id, season_number);
 
     CREATE TABLE IF NOT EXISTS episodes (
         id VARCHAR(255) PRIMARY KEY,

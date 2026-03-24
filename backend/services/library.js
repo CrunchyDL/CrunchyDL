@@ -86,6 +86,7 @@ class LibraryService {
         this.isScanning = true;
         console.log('[Library] Starting full scan...');
         try {
+            await this._cleanupDuplicateSeasons();
             const muxConfig = await this.configService.getMuxingConfig();
             const concurrency = parseInt(muxConfig.scanConcurrency) || 4;
 
@@ -281,7 +282,7 @@ class LibraryService {
                 const details = await catalogService.getSeriesDetails(crId);
                 if (details?.seasons) {
                     for (const s of details.seasons) {
-                        await this.db.run(`INSERT OR IGNORE INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)`, s.id, series.id, s.title, s.season_number);
+                        await this._mergeSeason(series.id, s.id, s.title, s.season_number);
                         const episodes = await catalogService.getEpisodes(s.id);
                         for (const ep of episodes) {
                             const ext = await this.db.get('SELECT path, is_downloaded FROM episodes WHERE id = ?', ep.id);
@@ -306,7 +307,7 @@ class LibraryService {
     async _syncOfflineEps(seriesId, seasons) {
         if (!seasons || !Array.isArray(seasons)) return;
         for (const s of seasons) {
-            await this.db.run(`INSERT OR IGNORE INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)`, s.id, seriesId, s.title, s.season_number);
+            await this._mergeSeason(seriesId, s.id, s.title, s.season_number);
             if (s.episodes && Array.isArray(s.episodes)) {
                 for (const ep of s.episodes) {
                     const ext = await this.db.get('SELECT id FROM episodes WHERE id = ?', ep.id);
@@ -319,6 +320,52 @@ class LibraryService {
                     }
                 }
             }
+        }
+    }
+
+    async _cleanupDuplicateSeasons() {
+        console.log('[Library] Checking for duplicate seasons...');
+        const duplicates = await this.db.all(`
+            SELECT series_id, season_number, COUNT(*) as count 
+            FROM seasons 
+            GROUP BY series_id, season_number 
+            HAVING count > 1
+        `);
+
+        for (const dup of duplicates) {
+            console.log(`[Library] Fixing duplicate season ${dup.season_number} for series ${dup.series_id}`);
+            const allVariants = await this.db.all(
+                'SELECT id FROM seasons WHERE series_id = ? AND season_number = ? ORDER BY id DESC', 
+                dup.series_id, dup.season_number
+            );
+            
+            // Keep the first one (official IDs usually come last or are more specific)
+            const masterId = allVariants[0].id;
+            const toDelete = allVariants.slice(1);
+
+            for (const other of toDelete) {
+                console.log(`[Library] Merging ${other.id} into ${masterId}`);
+                await this.db.run('UPDATE episodes SET season_id = ? WHERE season_id = ?', masterId, other.id);
+                await this.db.run('DELETE FROM seasons WHERE id = ?', other.id);
+            }
+        }
+    }
+
+    async _mergeSeason(seriesId, newId, title, seasonNumber) {
+        const existing = await this.db.get('SELECT id FROM seasons WHERE series_id = ? AND season_number = ?', seriesId, seasonNumber);
+        if (existing) {
+            if (existing.id !== newId) {
+                console.log(`[Library] Merging season ${seasonNumber} for series ${seriesId}: ${existing.id} -> ${newId}`);
+                // 1. Update seasons table (change primary key)
+                // In SQLite, we can't easily update PK if it's referenced, but let's try or insert-delete
+                await this.db.run('UPDATE seasons SET id = ?, title = ? WHERE id = ?', newId, title, existing.id);
+                // 2. Update episodes table
+                await this.db.run('UPDATE episodes SET season_id = ? WHERE season_id = ?', newId, existing.id);
+            } else {
+                await this.db.run('UPDATE seasons SET title = ? WHERE id = ?', title, newId);
+            }
+        } else {
+            await this.db.run('INSERT INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)', newId, seriesId, title, seasonNumber);
         }
     }
 
