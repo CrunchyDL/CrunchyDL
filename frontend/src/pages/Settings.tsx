@@ -10,21 +10,32 @@ function cn(...classes: (string | boolean | undefined)[]) {
 }
 
 const LANGUAGES = [
-  { locale: 'ja-JP', code: 'jpn', name: 'Japanese' },
-  { locale: 'en-US', code: 'eng', name: 'English' },
-  { locale: 'es-419', code: 'spa', name: 'Spanish (LatAm)' },
-  { locale: 'es-ES', code: 'spa-ES', name: 'Spanish (Europe)' },
-  { locale: 'pt-BR', code: 'por', name: 'Portuguese (Brazil)' },
-  { locale: 'pt-PT', code: 'por-PT', name: 'Portuguese (Portugal)' },
-  { locale: 'fr-FR', code: 'fra', name: 'French' },
-  { locale: 'de-DE', code: 'deu', name: 'German' },
-  { locale: 'it-IT', code: 'ita', name: 'Italian' },
-  { locale: 'ru-RU', code: 'rus', name: 'Russian' },
-  { locale: 'tr-TR', code: 'tur', name: 'Turkish' },
-  { locale: 'hi-IN', code: 'hin', name: 'Hindi' },
-  { locale: 'ko-KR', code: 'kor', name: 'Korean' },
-  { locale: 'zh-CN', code: 'zho', name: 'Chinese (Mainland)' },
-  { locale: 'ar-SA', code: 'ara', name: 'Arabic' },
+    { locale: 'ar-SA', code: 'ara', name: 'Arabic' },
+    { locale: 'ca-ES', code: 'cat', name: 'Catalan' },
+    { locale: 'zh-HK', code: 'zh-HK', name: 'Chinese (Hong-Kong)' },
+    { locale: 'zh-CN', code: 'zho', name: 'Chinese (Mainland)' },
+    { locale: 'zh-TW', code: 'chi', name: 'Chinese (Taiwan)' },
+    { locale: 'en-IN', code: 'eng', name: 'English (India)' },
+    { locale: 'en-US', code: 'eng', name: 'English (US)' },
+    { locale: 'fr-FR', code: 'fra', name: 'French' },
+    { locale: 'de-DE', code: 'deu', name: 'German' },
+    { locale: 'hi-IN', code: 'hin', name: 'Hindi' },
+    { locale: 'id-ID', code: 'ind', name: 'Indonesian' },
+    { locale: 'it-IT', code: 'ita', name: 'Italian' },
+    { locale: 'ja-JP', code: 'jpn', name: 'Japanese' },
+    { locale: 'ko-KR', code: 'kor', name: 'Korean' },
+    { locale: 'ms-MY', code: 'may', name: 'Malay (Malaysia)' },
+    { locale: 'pl-PL', code: 'pol', name: 'Polish' },
+    { locale: 'pt-BR', code: 'por', name: 'Portuguese (Brazil)' },
+    { locale: 'pt-PT', code: 'por', name: 'Portuguese (Portugal)' },
+    { locale: 'ru-RU', code: 'rus', name: 'Russian' },
+    { locale: 'es-ES', code: 'spa-ES', name: 'Spanish (Europe)' },
+    { locale: 'es-419', code: 'spa', name: 'Spanish (LatAm)' },
+    { locale: 'ta-IN', code: 'tam', name: 'Tamil (India)' },
+    { locale: 'te-IN', code: 'tel', name: 'Telugu (India)' },
+    { locale: 'th-TH', code: 'tha', name: 'Thai' },
+    { locale: 'tr-TR', code: 'tur', name: 'Turkish' },
+    { locale: 'vi-VN', code: 'vie', name: 'Vietnamese' }
 ];
 
 const Dropdown = ({ 
@@ -81,7 +92,8 @@ const Dropdown = ({
       return `${value.length} ${t('settings.selected')}`;
     }
     const option = options.find(o => (useCode ? o.code : o.locale) === value);
-    return option ? option.locale : (value || t('common.loading'));
+    if (!option) return value === 'none' ? t('settings.none') : (value || t('common.loading'));
+    return `${option.name === 'Ninguno' ? t('settings.none') : option.name} (${useCode ? option.code : option.locale})`;
   };
 
   return (
@@ -311,10 +323,18 @@ const MuxingSection = ({ config, updateConfig }: any) => {
             <Dropdown 
               label={t('settings.primary_audio_track')}
               value={config.defaultAudio || 'jpn'}
-              options={LANGUAGES}
+              options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
               useCode={true}
               onChange={(val) => updateConfig('defaultAudio', val)}
             />
+            <Dropdown 
+              label={t('settings.default_sub')}
+              value={config.defaultSub || 'none'}
+              options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
+              onChange={(val) => updateConfig('defaultSub', val)}
+            />
+          </div>
+          <div className="pt-4">
             <Dropdown 
               label={t('settings.additional_audios')}
               value={config.dubLang || ['jpn']}
@@ -335,10 +355,10 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.primary_audio')}
                 value={config.audioPriority?.[0] || 'jpn'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 useCode={true}
                 onChange={(val) => {
-                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa-ES'])];
+                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa'])];
                   newPrio[0] = val;
                   updateConfig('audioPriority', newPrio);
                 }}
@@ -346,10 +366,10 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.secondary_audio')}
                 value={config.audioPriority?.[1] || 'eng'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 useCode={true}
                 onChange={(val) => {
-                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa-ES'])];
+                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa'])];
                   newPrio[1] = val;
                   updateConfig('audioPriority', newPrio);
                 }}
@@ -357,10 +377,10 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.tertiary_audio')}
                 value={config.audioPriority?.[2] || 'spa-ES'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 useCode={true}
                 onChange={(val) => {
-                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa-ES'])];
+                  const newPrio = [...(config.audioPriority || ['jpn', 'eng', 'spa'])];
                   newPrio[2] = val;
                   updateConfig('audioPriority', newPrio);
                 }}
@@ -371,7 +391,7 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.primary_sub')}
                 value={config.subtitlePriority?.[0] || 'en-US'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 onChange={(val) => {
                   const newPrio = [...(config.subtitlePriority || ['en-US', 'es-419', 'es-ES'])];
                   newPrio[0] = val;
@@ -381,7 +401,7 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.secondary_sub')}
                 value={config.subtitlePriority?.[1] || 'es-419'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 onChange={(val) => {
                   const newPrio = [...(config.subtitlePriority || ['en-US', 'es-419', 'es-ES'])];
                   newPrio[1] = val;
@@ -391,7 +411,7 @@ const MuxingSection = ({ config, updateConfig }: any) => {
               <Dropdown 
                 label={t('settings.tertiary_sub')}
                 value={config.subtitlePriority?.[2] || 'es-ES'}
-                options={LANGUAGES}
+                options={[{ locale: 'none', code: 'none', name: 'Ninguno' }, ...LANGUAGES]}
                 onChange={(val) => {
                   const newPrio = [...(config.subtitlePriority || ['en-US', 'es-419', 'es-ES'])];
                   newPrio[2] = val;
@@ -501,7 +521,7 @@ const MuxingSection = ({ config, updateConfig }: any) => {
 );
 };
 
-const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig }: any) => {
+const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig, metadataLanguage, setMetadataLanguage }: any) => {
   const { t } = useTranslation();
   return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
@@ -515,6 +535,17 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
             <div className="text-lg font-bold text-white">{t('settings.provider_priority')}</div>
             <div className="text-sm text-gray-400">{t('settings.priority_desc')}</div>
           </div>
+        </div>
+
+        <div className="bg-black/20 p-6 rounded-2xl border border-white/5 space-y-4">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">{t('setup.meta_lang')}</h3>
+            <Dropdown 
+                label=""
+                value={metadataLanguage}
+                options={LANGUAGES}
+                onChange={(val) => setMetadataLanguage(val)}
+            />
+            <p className="text-[10px] text-gray-500 italic">{t('settings.meta_lang_tip')}</p>
         </div>
         
         <div className="grid grid-cols-1 gap-3">
@@ -697,6 +728,7 @@ const Settings = () => {
   const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState<'account' | 'downloads' | 'library' | 'system'>('account');
   const [config, setConfig] = useState<any>(null);
+  const [metadataLanguage, setMetadataLanguage] = useState('en-US');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [authStatus, setAuthStatus] = useState<any>(null);
@@ -710,16 +742,18 @@ const Settings = () => {
     const fetchData = async () => {
         const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
         try {
-            const [cfg, auth, sys, ver] = await Promise.all([
+            const [cfg, auth, sys, ver, meta] = await Promise.all([
                 fetch('/api/config/muxing', { headers }).then(r => r.json()),
                 fetch('/api/auth/status', { headers }).then(r => r.json()),
                 fetch('/api/system/info', { headers }).then(r => r.json()),
-                fetch('/api/version').then(r => r.json())
+                fetch('/api/version').then(r => r.json()),
+                fetch('/api/config/metadata-language', { headers }).then(r => r.json())
             ]);
             setConfig(cfg);
             setAuthStatus(auth);
             setSystemInfo(sys);
             setVersions(ver);
+            setMetadataLanguage(meta.language);
         } catch (err) {
             console.error('Error fetching settings data:', err);
         }
@@ -754,15 +788,25 @@ const Settings = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/config/muxing', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(config)
-      });
-      if (res.ok) {
+      const headers = { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      };
+      
+      const [resMux, resMeta] = await Promise.all([
+        fetch('/api/config/muxing', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(config)
+        }),
+        fetch('/api/config/metadata-language', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ language: metadataLanguage })
+        })
+      ]);
+
+      if (resMux.ok && resMeta.ok) {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }
@@ -869,6 +913,8 @@ const Settings = () => {
                 moveProvider={moveProvider}
                 config={config}
                 updateConfig={updateConfig}
+                metadataLanguage={metadataLanguage}
+                setMetadataLanguage={setMetadataLanguage}
             />
         )}
 

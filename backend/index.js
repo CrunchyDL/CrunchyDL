@@ -944,6 +944,36 @@ app.get('/api/config/muxing', authenticate, hasPermission('sys:manage-users'), a
     }
 });
 
+app.post('/api/config/muxing', authenticate, hasPermission('sys:manage-users'), async (req, res) => {
+    try {
+        await configService.updateMuxingConfig(req.body);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/config/metadata-language', authenticate, async (req, res) => {
+    try {
+        const db = await setupDb();
+        const setting = await db.get('SELECT value FROM settings WHERE key = ?', 'metadata_language');
+        res.json({ language: setting ? setting.value : 'en-US' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/config/metadata-language', authenticate, hasPermission('sys:manage-users'), async (req, res) => {
+    try {
+        const { language } = req.body;
+        const db = await setupDb();
+        await db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 'metadata_language', language);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/downloads/:id/retry', async (req, res) => {
     try {
         const success = await cliServiceInstance.retryDownload(parseInt(req.params.id));

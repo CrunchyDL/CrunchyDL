@@ -11,8 +11,17 @@ class CatalogService {
   constructor() {
     this.tokenFilePath = path.join(__dirname, '..', 'multi-downloader-nx', 'config', 'cr_token.yml');
     this.apiBase = 'https://beta-api.crunchyroll.com';
-    this.refreshPromise = null;
     this.cmsData = null;
+  }
+
+  async getMetadataLocale() {
+    try {
+      const db = await setupDb();
+      const row = await db.get('SELECT value FROM settings WHERE key = ?', 'metadata_language');
+      return row?.value || 'en-US';
+    } catch (e) {
+      return 'en-US';
+    }
   }
 
   async getToken(forceRefresh = false) {
@@ -317,8 +326,7 @@ class CatalogService {
     const seasonTag = `${season.toLowerCase()}-${year}`;
     
     try {
-      const config = await configService.getMuxingConfig();
-      const locale = config.defaultAudio?.cr_locale || 'en-US';
+      const locale = await this.getMetadataLocale();
 
       console.log(`[Catalog] Fetching Crunchyroll seasonal items for tag: ${seasonTag} (locale: ${locale})`);
       const response = await this._request('get', `${this.apiBase}/content/v2/discover/browse`, {
@@ -352,8 +360,7 @@ class CatalogService {
 
   async getBrowseCatalog({ sort = 'popularity', n = 100, start = 0 }) {
     try {
-      const config = await configService.getMuxingConfig();
-      const locale = config.defaultAudio?.cr_locale || 'en-US';
+      const locale = await this.getMetadataLocale();
 
       console.log(`[Catalog] Fetching Crunchyroll browse catalog (sort: ${sort}, start: ${start}, locale: ${locale})`);
       const response = await this._request('get', `${this.apiBase}/content/v2/discover/browse`, {
@@ -387,8 +394,7 @@ class CatalogService {
 
   async getSeriesDetails(seriesId) {
     try {
-      const config = await configService.getMuxingConfig();
-      const locale = config.defaultAudio?.cr_locale || 'en-US';
+      const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
 
       const seasonsResponse = await this._request('get', `${this.apiBase}/content/v2/cms/series/${seriesId}/seasons`, {
@@ -421,10 +427,11 @@ class CatalogService {
 
   async getEpisodes(seasonId) {
     try {
+      const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
       const response = await this._request('get', `${this.apiBase}/content/v2/cms/seasons/${seasonId}/episodes`, {
         params: { 
-            locale: 'en-US',
+            locale: locale,
             Policy: cms.policy,
             Signature: cms.signature,
             'Key-Pair-Id': cms.key_pair_id
@@ -447,8 +454,7 @@ class CatalogService {
 
   async searchSeries(query) {
     try {
-      const config = await configService.getMuxingConfig();
-      const locale = config.defaultAudio?.cr_locale || 'en-US';
+      const locale = await this.getMetadataLocale();
 
       const response = await this._request('get', `${this.apiBase}/content/v2/discover/search`, {
         params: {
@@ -476,10 +482,11 @@ class CatalogService {
 
   async getSeriesInfo(seriesId) {
     try {
+      const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
       const response = await this._request('get', `${this.apiBase}/content/v2/cms/series/${seriesId}`, {
         params: { 
-            locale: 'en-US',
+            locale: locale,
             Policy: cms.policy,
             Signature: cms.signature,
             'Key-Pair-Id': cms.key_pair_id

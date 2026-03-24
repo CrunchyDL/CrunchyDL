@@ -3,6 +3,35 @@ import axios from 'axios';
 import { Database, User, Shield, Check, Server, Save, ArrowRight, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const CR_LANGS = [
+    { locale: 'ar-SA', code: 'ara', name: 'Arabic' },
+    { locale: 'ca-ES', code: 'cat', name: 'Catalan' },
+    { locale: 'zh-HK', code: 'zh-HK', name: 'Chinese (Hong-Kong)' },
+    { locale: 'zh-CN', code: 'zho', name: 'Chinese (Mainland)' },
+    { locale: 'zh-TW', code: 'chi', name: 'Chinese (Taiwan)' },
+    { locale: 'en-IN', code: 'eng', name: 'English (India)' },
+    { locale: 'en-US', code: 'eng', name: 'English (US)' },
+    { locale: 'fr-FR', code: 'fra', name: 'French' },
+    { locale: 'de-DE', code: 'deu', name: 'German' },
+    { locale: 'hi-IN', code: 'hin', name: 'Hindi' },
+    { locale: 'id-ID', code: 'ind', name: 'Indonesian' },
+    { locale: 'it-IT', code: 'ita', name: 'Italian' },
+    { locale: 'ja-JP', code: 'jpn', name: 'Japanese' },
+    { locale: 'ko-KR', code: 'kor', name: 'Korean' },
+    { locale: 'ms-MY', code: 'may', name: 'Malay (Malaysia)' },
+    { locale: 'pl-PL', code: 'pol', name: 'Polish' },
+    { locale: 'pt-BR', code: 'por', name: 'Portuguese (Brazil)' },
+    { locale: 'pt-PT', code: 'por', name: 'Portuguese (Portugal)' },
+    { locale: 'ru-RU', code: 'rus', name: 'Russian' },
+    { locale: 'es-ES', code: 'spa-ES', name: 'Spanish (Europe)' },
+    { locale: 'es-419', code: 'spa', name: 'Spanish (LatAm)' },
+    { locale: 'ta-IN', code: 'tam', name: 'Tamil (India)' },
+    { locale: 'te-IN', code: 'tel', name: 'Telugu (India)' },
+    { locale: 'th-TH', code: 'tha', name: 'Thai' },
+    { locale: 'tr-TR', code: 'tur', name: 'Turkish' },
+    { locale: 'vi-VN', code: 'vie', name: 'Vietnamese' }
+];
+
 const Setup = () => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
@@ -25,7 +54,15 @@ const Setup = () => {
         tvdbApiKey: '',
         crEmail: '',
         crPassword: '',
-        metadataLanguage: 'es-ES'
+        metadataLanguage: 'es-ES',
+        dubP1: 'jpn',
+        dubP2: 'spa',
+        dubP3: 'eng',
+        subP1: 'es-ES',
+        subP2: 'es-419',
+        subP3: 'en-US',
+        defaultAudio: 'jpn',
+        defaultSub: 'es-ES'
     });
     const [isInstalling, setIsInstalling] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -58,7 +95,15 @@ const Setup = () => {
                 tvdbApiKey: config.tvdbApiKey || null,
                 crEmail: config.crEmail || null,
                 crPassword: config.crPassword || null,
-                metadataLanguage: config.metadataLanguage
+                metadataLanguage: config.metadataLanguage,
+                dubP1: config.dubP1,
+                dubP2: config.dubP2,
+                dubP3: config.dubP3,
+                subP1: config.subP1,
+                subP2: config.subP2,
+                subP3: config.subP3,
+                defaultAudio: config.defaultAudio,
+                defaultSub: config.defaultSub
             };
             const response = await axios.post('/api/setup/install', payload);
             if (response.data.token) {
@@ -234,65 +279,129 @@ const Setup = () => {
                 );
             case 3:
                 return (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">{t('sidebar.library')}</h2>
-                            <p className="text-muted-foreground">{t('setup.metadata_desc')}</p>
+                            <h2 className="text-xl font-bold text-white mb-1">{t('sidebar.library')}</h2>
+                            <p className="text-[10px] text-muted-foreground">{t('setup.metadata_desc')}</p>
                         </div>
-                        <div className="space-y-4">
-                            <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TMDB API Key</label>
-                                <input
-                                    type="text"
-                                    value={config.tmdbApiKey}
-                                    onChange={(e) => setConfig({ ...config, tmdbApiKey: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-all"
-                                    placeholder="your-tmdb-key"
-                                />
-                                <p className="text-[10px] text-muted-foreground px-1">
-                                    <span className="text-primary font-bold">{t('setup.sqlite')}?</span> {t('setup.tmdb_recommended')}
-                                </p>
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 p-3 rounded-xl space-y-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">TMDB Key</label>
+                                    <input
+                                        type="text"
+                                        value={config.tmdbApiKey}
+                                        onChange={(e) => setConfig({ ...config, tmdbApiKey: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-primary transition-all text-sm"
+                                        placeholder="Optional"
+                                    />
+                                </div>
+                                <div className="bg-white/5 p-3 rounded-xl space-y-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">TVDB Key</label>
+                                    <input
+                                        type="text"
+                                        value={config.tvdbApiKey}
+                                        onChange={(e) => setConfig({ ...config, tvdbApiKey: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-primary transition-all text-sm"
+                                        placeholder="Optional"
+                                    />
+                                </div>
                             </div>
-                            <div className="bg-white/5 p-4 rounded-xl space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TVDB API Key</label>
-                                <input
-                                    type="text"
-                                    value={config.tvdbApiKey}
-                                    onChange={(e) => setConfig({ ...config, tvdbApiKey: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-all"
-                                    placeholder="your-tvdb-key"
-                                />
-                                <p className="text-[10px] text-muted-foreground px-1">{t('setup.tvdb_desc')}</p>
-                            </div>
+                            
                             <div className="bg-white/5 p-4 rounded-xl space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('setup.meta_lang')}</label>
                                 <select
                                     value={config.metadataLanguage}
                                     onChange={(e) => setConfig({ ...config, metadataLanguage: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary transition-all cursor-pointer"
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-white focus:outline-none focus:border-primary transition-all cursor-pointer text-sm"
                                 >
-                                    <option value="es-ES">Español (España)</option>
-                                    <option value="es-MX">Español (México)</option>
-                                    <option value="en-US">English (United States)</option>
-                                    <option value="en-GB">English (United Kingdom)</option>
-                                    <option value="fr-FR">Français (France)</option>
-                                    <option value="de-DE">Deutsch (Deutschland)</option>
-                                    <option value="it-IT">Italiano (Italia)</option>
-                                    <option value="pt-BR">Português (Brasil)</option>
+                                    {CR_LANGS.map(lang => (
+                                        <option key={lang.locale} value={lang.locale}>{lang.name}</option>
+                                    ))}
                                 </select>
-                                <p className="text-[10px] text-muted-foreground px-1">{t('setup.meta_lang_desc')}</p>
+                            </div>
+
+                             <div className="bg-white/5 p-4 rounded-xl space-y-3">
+                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block border-b border-white/5 pb-1">{t('setup.audio_priorities')}</label>
+                                 <div className="grid grid-cols-3 gap-2">
+                                     {[1, 2, 3].map(p => (
+                                         <div key={`audio-${p}`} className="space-y-1">
+                                             <label className="text-[9px] text-muted-foreground uppercase">P{p}</label>
+                                             <select
+                                                 value={(config as any)[`dubP${p}`]}
+                                                 onChange={(e) => setConfig({ ...config, [`dubP${p}`]: e.target.value })}
+                                                 className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white text-[11px] focus:outline-none focus:border-primary"
+                                             >
+                                                 {CR_LANGS.map(lang => (
+                                                     <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                                 ))}
+                                                 <option value="none">{t('settings.none')}</option>
+                                             </select>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl space-y-3">
+                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block border-b border-white/5 pb-1">{t('setup.sub_priorities')}</label>
+                                 <div className="grid grid-cols-3 gap-2">
+                                     {[1, 2, 3].map(p => (
+                                         <div key={`sub-${p}`} className="space-y-1">
+                                             <label className="text-[9px] text-muted-foreground uppercase">P{p}</label>
+                                             <select
+                                                 value={(config as any)[`subP${p}`]}
+                                                 onChange={(e) => setConfig({ ...config, [`subP${p}`]: e.target.value })}
+                                                 className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white text-[11px] focus:outline-none focus:border-primary"
+                                             >
+                                                 {CR_LANGS.map(lang => (
+                                                     <option key={lang.locale} value={lang.locale}>{lang.name}</option>
+                                                 ))}
+                                                 <option value="none">{t('settings.none')}</option>
+                                             </select>
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                 <div className="bg-white/5 p-3 rounded-xl space-y-1">
+                                     <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('setup.default_audio')}</label>
+                                     <select
+                                         value={config.defaultAudio}
+                                         onChange={(e) => setConfig({ ...config, defaultAudio: e.target.value })}
+                                         className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary"
+                                     >
+                                         {CR_LANGS.map(lang => (
+                                             <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                         ))}
+                                         <option value="none">{t('settings.none')}</option>
+                                     </select>
+                                 </div>
+                                 <div className="bg-white/5 p-3 rounded-xl space-y-1">
+                                     <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('settings.default_sub')}</label>
+                                     <select
+                                         value={config.defaultSub}
+                                         onChange={(e) => setConfig({ ...config, defaultSub: e.target.value })}
+                                         className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary"
+                                     >
+                                         {CR_LANGS.map(lang => (
+                                             <option key={lang.locale} value={lang.locale}>{lang.name}</option>
+                                         ))}
+                                         <option value="none">{t('settings.none')}</option>
+                                     </select>
+                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex gap-4 pt-2">
                             <button
                                 onClick={() => setStep(2)}
-                                className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-12 rounded-xl transition-all"
+                                className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-10 rounded-xl transition-all text-sm"
                             >
                                 {t('common.back')}
                             </button>
                             <button
                                 onClick={() => setStep(4)}
-                                className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all group"
+                                className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-10 rounded-xl flex items-center justify-center gap-2 transition-all group text-sm"
                             >
                                 {t('setup.continue')} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>

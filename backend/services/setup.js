@@ -2,9 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { setupDb } = require('../db');
+const ConfigService = require('./config');
 
 class SetupService {
     constructor() {
+        this.configService = new ConfigService();
         this.configPath = path.join(__dirname, '..', '..', 'data', 'config.json');
         this.dataDir = path.dirname(this.configPath);
         if (!fs.existsSync(this.dataDir)) {
@@ -42,6 +44,20 @@ class SetupService {
             // 3. Save Optional settings
             const metadataLang = config.metadataLanguage || 'es-ES';
             await db.run('INSERT INTO settings (`key`, value) VALUES (?, ?)', 'metadata_language', metadataLang);
+            
+            // Handle 3-level Priorities
+            const dubPriority = [config.dubP1, config.dubP2, config.dubP3].filter(l => l && l !== 'none');
+            const subPriority = [config.subP1, config.subP2, config.subP3].filter(l => l && l !== 'none');
+
+            // Sync with central config for multi-downloader-nx
+            await this.configService.updateMuxingConfig({
+                dubLang: dubPriority,
+                dlsubs: subPriority,
+                defaultAudio: config.defaultAudio || dubPriority[0] || 'jpn',
+                defaultSub: config.defaultSub || subPriority[0] || 'es-ES',
+                audioPriority: dubPriority,
+                subtitlePriority: subPriority.length > 0 ? [...subPriority, 'none'] : ['none']
+            });
 
             if (config.tmdbApiKey) {
                 await db.run('INSERT INTO settings (`key`, value) VALUES (?, ?)', 'tmdb_api_key', config.tmdbApiKey);
