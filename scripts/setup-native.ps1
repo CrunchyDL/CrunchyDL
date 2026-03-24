@@ -1,9 +1,9 @@
-# Crunchyroll Downloader - Native Setup Script (Windows)
+# CrunchyDL - Native Setup Script (Windows)
 # This script automates the installation and build process without Docker.
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 Starting Native Setup (Windows)..." -ForegroundColor Cyan
+Write-Host "🚀 Starting CrunchyDL Setup (Windows)..." -ForegroundColor Cyan
 
 # 1. Check Dependencies
 function Check-Dependency($Name) {

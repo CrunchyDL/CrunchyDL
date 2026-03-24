@@ -35,8 +35,8 @@ A **premium, community-driven** platform for automated anime management and down
 
 1.  **Clone the repository**:
     ```bash
-    git clone --recursive https://github.com/USER/Crunchyroll-Downloader-Docker.git
-    cd Crunchyroll-Downloader-Docker
+    git clone --recursive https://github.com/CrunchyDL/CrunchyDL.git
+    cd CrunchyDL
     ```
 2.  **Configure DRM (Optional but recommended)**:
     Place your CDM files in the following folders (created automatically or manually):

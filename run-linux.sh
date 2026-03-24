@@ -1,4 +1,4 @@
 #!/bin/bash
-echo "🚀 Starting Crunchyroll Downloader..."
+echo "🚀 Starting CrunchyDL..."
 cd backend
 node index.js

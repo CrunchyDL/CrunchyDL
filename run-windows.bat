@@ -1,6 +1,6 @@
 @echo off
-TITLE Crunchyroll Downloader Server
-echo 🚀 Starting Crunchyroll Downloader...
+TITLE CrunchyDL Server
+echo 🚀 Starting CrunchyDL...
 cd backend
 node index.js
 pause

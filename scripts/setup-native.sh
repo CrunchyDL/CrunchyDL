@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Crunchyroll Downloader - Native Setup Script (Linux)
+# CrunchyDL - Native Setup Script (Linux)
 # This script automates the installation and build process without Docker.
 
 set -e
 
-echo "🚀 Starting Native Setup (Linux)..."
+echo "🚀 Starting CrunchyDL Setup (Linux)..."
 
 # 1. Check Dependencies
 check_dep() {
