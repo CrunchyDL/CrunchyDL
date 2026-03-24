@@ -5,6 +5,7 @@ const axios = require('axios');
 
 const ConfigService = require('./config');
 const configService = new ConfigService();
+const { setupDb } = require('../db');
 
 class CatalogService {
   constructor() {
@@ -89,7 +90,34 @@ class CatalogService {
 
   async doAnonymousAuth() {
     try {
-      const basic = 'ZWE5Y21xbHRscXl6eWFuMXZkeTQ6LV9ZQ3BBRDVnc3hDaU9IWnpSTGdJQ1I4Z09XWGlsUVI='; // From multi-downloader-nx
+      // 1. Try to use stored credentials if available
+      try {
+        const db = await setupDb();
+        const emailRow = await db.get('SELECT value FROM settings WHERE `key` = ?', 'crunchyroll_email');
+        const passRow = await db.get('SELECT value FROM settings WHERE `key` = ?', 'crunchyroll_password');
+        
+        if (emailRow?.value && passRow?.value) {
+          console.log('[Catalog] Found stored credentials, attempting automatic login...');
+          try {
+            const loginResult = await this.login({ username: emailRow.value, password: passRow.value });
+            if (loginResult && loginResult.success) {
+              console.log('[Catalog] Automatic login successful.');
+              return;
+            }
+          } catch (loginErr) {
+            console.error('[Catalog] Automatic login failed:', loginErr.message);
+            // Fall through to anonymous
+          }
+        }
+      } catch (dbErr) {
+        console.error('[Catalog] Failed to check stored credentials in DB:', dbErr.message);
+      }
+
+      // 2. Anonymous Auth (Guest)
+      // Updated credentials from multi-downloader-nx/modules/module.api-urls.ts
+      const basic = 'bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI='; 
+      const userAgent = 'Crunchyroll/ANDROIDTV/3.58.0_22336 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)';
+      
       const uuid = require('crypto').randomUUID();
       const decoded = Buffer.from(basic, 'base64').toString('utf8');
       const authData = new URLSearchParams({
@@ -106,7 +134,10 @@ class CatalogService {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
           'ETP-Anonymous-ID': uuid,
-          'User-Agent': 'Crunchyroll/ANDROIDTV/3.54.5_22304 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)'
+          'User-Agent': userAgent,
+          'Accept': 'application/json',
+          'Accept-Charset': 'UTF-8',
+          'Request-Type': 'SignIn'
         }
       });
 
@@ -139,7 +170,8 @@ class CatalogService {
         throw new Error('No refresh token available');
       }
 
-      const basic = 'ZWE5Y21xbHRscXl6eWFuMXZkeTQ6LV9ZQ3BBRDVnc3hDaU9IWnpSTGdJQ1I4Z09XWGlsUVI=';
+      const basic = 'bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI=';
+      const userAgent = 'Crunchyroll/ANDROIDTV/3.58.0_22336 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)';
       const decoded = Buffer.from(basic, 'base64').toString('utf8');
       const client = decoded.split(':');
       const uuid = tokenData.device_id || require('crypto').randomUUID();
@@ -158,7 +190,9 @@ class CatalogService {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
           'ETP-Anonymous-ID': uuid,
-          'User-Agent': 'Crunchyroll/ANDROIDTV/3.54.5_22304 (Android 12; en-US; SHIELD Android TV Build/SR1A.211012.001)'
+          'User-Agent': userAgent,
+          'Accept': 'application/json',
+          'Accept-Charset': 'UTF-8'
         }
       });
 

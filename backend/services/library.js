@@ -352,20 +352,48 @@ class LibraryService {
     }
 
     async _mergeSeason(seriesId, newId, title, seasonNumber) {
+        // 1. Check if a season with this number already exists for this series
         const existing = await this.db.get('SELECT id FROM seasons WHERE series_id = ? AND season_number = ?', seriesId, seasonNumber);
+        
         if (existing) {
-            if (existing.id !== newId) {
-                console.log(`[Library] Merging season ${seasonNumber} for series ${seriesId}: ${existing.id} -> ${newId}`);
-                // 1. Update seasons table (change primary key)
-                // In SQLite, we can't easily update PK if it's referenced, but let's try or insert-delete
-                await this.db.run('UPDATE seasons SET id = ?, title = ? WHERE id = ?', newId, title, existing.id);
-                // 2. Update episodes table
-                await this.db.run('UPDATE episodes SET season_id = ? WHERE season_id = ?', newId, existing.id);
-            } else {
+            if (existing.id === newId) {
+                // Same ID, just update metadata
                 await this.db.run('UPDATE seasons SET title = ? WHERE id = ?', title, newId);
+            } else {
+                // Different ID! (e.g. local placeholder vs official Crunchyroll ID)
+                console.log(`[Library] Merging season ${seasonNumber} for series ${seriesId}: ${existing.id} -> ${newId}`);
+                
+                // 2. Ensure newId exists in seasons table
+                const targetExists = await this.db.get('SELECT id FROM seasons WHERE id = ?', newId);
+                if (!targetExists) {
+                    // To insert newId with the same seasonNumber, we must temporarily rename the existing one's number
+                    // to avoid the UNIQUE(series_id, season_number) constraint.
+                    const tempNumber = -1 * Math.floor(Math.random() * 1000000);
+                    await this.db.run('UPDATE seasons SET season_number = ? WHERE id = ?', tempNumber, existing.id);
+                    
+                    // Insert the new "official" season record
+                    await this.db.run('INSERT INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)', 
+                        newId, seriesId, title, seasonNumber);
+                }
+                
+                // 3. Move episodes from the old ID to the new ID
+                // Note: If episodes with same number exist in both, this might cause PK collisions in episodes table 
+                // but the DB schema uses a single string ID for episodes (usually the CR id), so it should be fine.
+                await this.db.run('UPDATE episodes SET season_id = ? WHERE season_id = ?', newId, existing.id);
+                
+                // 4. Delete the old redundant season record
+                await this.db.run('DELETE FROM seasons WHERE id = ?', existing.id);
             }
         } else {
-            await this.db.run('INSERT INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)', newId, seriesId, title, seasonNumber);
+            // No season with this number exists. Check if the ID itself exists under a different number.
+            const idExists = await this.db.get('SELECT id FROM seasons WHERE id = ?', newId);
+            if (idExists) {
+                await this.db.run('UPDATE seasons SET series_id = ?, title = ?, season_number = ? WHERE id = ?', 
+                    seriesId, title, seasonNumber, newId);
+            } else {
+                await this.db.run('INSERT INTO seasons (id, series_id, title, season_number) VALUES (?, ?, ?, ?)', 
+                    newId, seriesId, title, seasonNumber);
+            }
         }
     }
 
