@@ -318,7 +318,7 @@
     "error_image_size": "Image too large (Max 10MB)"
   },
   "settings": {
-    "title": "Settings of",
+    "title": "Settings",
     "subtitle": "Configure your account, muxing engine and system preferences.",
     "account_title": "Crunchyroll Account",
     "logged_in_as": "Logged in as {{username}}",
