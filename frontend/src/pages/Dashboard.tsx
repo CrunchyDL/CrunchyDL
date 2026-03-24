@@ -135,7 +135,7 @@ const Dashboard = () => {
                                 <Clock size={16} className="text-primary" />
                                 {t('dashboard.recent_arrivals')}
                             </h3>
-                            <Link to="/full-catalog" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">{t('dashboard.view_all')}</Link>
+                            <Link to="/all-series" className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">{t('dashboard.view_all')}</Link>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
@@ -148,7 +148,7 @@ const Dashboard = () => {
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                                            <Link to={`/full-catalog`} className="w-full bg-primary text-secondary py-2 rounded-xl text-[10px] font-black uppercase text-center">
+                                            <Link to={`/all-series`} className="w-full bg-primary text-secondary py-2 rounded-xl text-[10px] font-black uppercase text-center">
                                                 {t('dashboard.go_to_series')}
                                             </Link>
                                         </div>
