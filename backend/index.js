@@ -87,7 +87,7 @@ const authenticate = (req, res, next) => {
     // Since this middleware is used with app.use('/api', authenticate),
     // the req.path is relative to /api (e.g., /auth/login, /stock-avatars)
     if (req.path === '/health' ||
-        req.path === '/api/version' ||
+        req.path === '/version' ||
         req.path === '/auth/login' ||
         req.path === '/setup/status' ||
         req.path === '/setup/install' ||
