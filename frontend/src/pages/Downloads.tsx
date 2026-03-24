@@ -143,7 +143,7 @@ const Downloads = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="text-xs font-bold text-white truncate max-w-[150px]">
-                        {t('catalog.episode_title', { number: (() => {
+                        {t('catalog.episode_label', { number: (() => {
                           const m = dl.name.match(/E(\d+)/i) || dl.name.match(/Ep\s*(\d+)/i) || dl.name.match(/Episode\s*(\d+)/i);
                           return m ? m[1] : dl.id;
                         })() }).toUpperCase()} 
