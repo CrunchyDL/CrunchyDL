@@ -5,6 +5,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/dokman)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/T2kfCRtDEy)
 
 A **premium, community-driven** platform for automated anime management and downloading. Built with a modern, high-performance architecture and a stunning user interface.
 
@@ -80,6 +81,14 @@ If you like the project and want to support its development, you can buy me a co
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/dokman)
 
 You can also see our list of amazing [Donors](DONORS.md).
+
+---
+
+## 💬 Community
+
+Join our [Discord Server](https://discord.gg/T2kfCRtDEy) to get support, share suggestions, or just chat with other users!
+
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/T2kfCRtDEy)
 
 ---
 
