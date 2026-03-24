@@ -1,20 +1,22 @@
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from './components/Sidebar';
-import Catalog from './pages/Catalog';
-import Search from './pages/Search';
-import Downloads from './pages/Downloads';
-import Library from './pages/Library';
-import Settings from './pages/Settings';
-import Admin from './pages/Admin';
-import Login from './pages/Login';
-import ChangePassword from './pages/ChangePassword';
-import Suggestions from './pages/Suggestions';
-import AllSeries from './pages/AllSeries';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import Setup from './pages/Setup';
 import { AuthProvider, useAuth } from './context/AuthContext';
+
+const Catalog = lazy(() => import('./pages/Catalog'));
+const Search = lazy(() => import('./pages/Search'));
+const Downloads = lazy(() => import('./pages/Downloads'));
+const Library = lazy(() => import('./pages/Library'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Login = lazy(() => import('./pages/Login'));
+const ChangePassword = lazy(() => import('./pages/ChangePassword'));
+const Suggestions = lazy(() => import('./pages/Suggestions'));
+const AllSeries = lazy(() => import('./pages/AllSeries'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Setup = lazy(() => import('./pages/Setup'));
 
 const AppContent = () => {
   const { t } = useTranslation();
@@ -48,19 +50,21 @@ const AppContent = () => {
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-8">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/catalog" element={<Catalog />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/all-series" element={<AllSeries />} />
-            <Route path="/downloads" element={<Downloads />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="/suggestions" element={<Suggestions />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" />} />
-            <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/dashboard" />} />
-          </Routes>
+          <Suspense fallback={<div className="flex h-full items-center justify-center py-20 animate-pulse text-primary font-bold tracking-widest uppercase text-xs">Cargando...</div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/catalog" element={<Catalog />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/all-series" element={<AllSeries />} />
+              <Route path="/downloads" element={<Downloads />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/suggestions" element={<Suggestions />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={isAdmin ? <Settings /> : <Navigate to="/dashboard" />} />
+              <Route path="/admin" element={isAdmin ? <Admin /> : <Navigate to="/dashboard" />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </Router>
