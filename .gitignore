@@ -46,5 +46,13 @@ inspect_db.js
 backend/node_modules/
 frontend/node_modules/
 backend/dist/
+backend/public/
 frontend/dist/
 frontend/build/
+frontend/public/
+
+
+# DRM Specific tools
+shaka-packager.exe
+packager-win-x64.exe
+mp4decrypter.exe
