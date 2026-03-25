@@ -23,11 +23,22 @@ Check-Dependency "ffmpeg"
 Check-Dependency "git"
 
 Write-Host "Checking for DRM tools (mp4decrypt or shaka-packager)..." -ForegroundColor Yellow
-$mp4decryptFound = Get-Command "mp4decrypt" -ErrorAction SilentlyContinue
-$shakaFound = Get-Command "shaka-packager" -ErrorAction SilentlyContinue
 
-if (!$mp4decryptFound -and !$shakaFound) {
-    Write-Host "⚠️  WARNING: Neither mp4decrypt nor shaka-packager was found in your PATH." -ForegroundColor DarkYellow
+$foundDrm = $false
+$drmApps = @("mp4decrypt", "shaka-packager", "packager-win-x64")
+
+foreach ($app in $drmApps) {
+    if (Get-Command "$app.exe" -ErrorAction SilentlyContinue) {
+        Write-Host "✅ Found $app in PATH." -ForegroundColor Green
+        $foundDrm = $true
+    } elseif (Test-Path "$app.exe") {
+        Write-Host "✅ Found $app.exe in project root." -ForegroundColor Green
+        $foundDrm = $true
+    }
+}
+
+if (!$foundDrm) {
+    Write-Host "⚠️  WARNING: Neither mp4decrypt nor shaka-packager was found in your PATH or project root." -ForegroundColor DarkYellow
     Write-Host "These tools are required to decrypt protected content (DRM)." -ForegroundColor DarkYellow
     Write-Host "Please install one of them for a better experience." -ForegroundColor DarkYellow
     Write-Host "Download mp4decrypt (Bento4 SDK): https://www.bento4.com/downloads/"
