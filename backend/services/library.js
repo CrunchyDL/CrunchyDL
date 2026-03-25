@@ -195,10 +195,10 @@ class LibraryService {
                 let existingById = await this.db.get('SELECT * FROM series WHERE id = ?', finalId);
                 
                 if (!existingById && crLinkId) {
-                    existingById = await this.db.get('SELECT * FROM series WHERE crunchyroll_id = ?', crLinkId);
-                    if (existingById && !finalId.startsWith('local-')) {
-                        console.log(`[Library] Found existing series ${existingById.id} by Crunchyroll ID ${crLinkId}. Re-linking to ${finalId}`);
-                        // We will let the migration logic below handle the ID change if needed
+                    const existingByCr = await this.db.get('SELECT * FROM series WHERE crunchyroll_id = ?', crLinkId);
+                    if (existingByCr && !finalId.startsWith('local-')) {
+                        console.log(`[Library] Found existing series ${existingByCr.id} by Crunchyroll ID ${crLinkId}. Re-linking to ${finalId}`);
+                        if (!currentId) currentId = existingByCr.id;
                     }
                 }
 

@@ -63,6 +63,7 @@ If you prefer to run the application directly on your host system (Windows or Li
 - **Node.js**: v18 or later.
 - **FFmpeg**: Must be installed and in your system's PATH.
 - **Git**: For cloning and submodules.
+- **DRM Tools (Windows)**: Either [mp4decrypt](https://www.bento4.com/downloads/) or [shaka-packager](https://github.com/shaka-project/shaka-packager/releases) must be in your PATH for decryption to work.
 
 ### 2. Automatic Setup
 We provide helper scripts to automate the build and dependency installation:

@@ -111,6 +111,7 @@ docker run -p 3000:3000 -v $(pwd)/data:/app/data crunchy-downloader
 
 - **Disk Permissions**: Ensure the Docker user has write permissions for the `./downloads` folders.
 - **FFmpeg**: The container already includes the necessary dependencies. If you experience conversion failures, ensure the host has enough memory assigned to Docker.
+- **DRM Tools (Native Windows)**: If running natively on Windows, you **must** have `mp4decrypt` (Bento4) or `shaka-packager` in your system PATH. Without these, the downloader will fail to decrypt protected content.
 - **Remote Access**: If deploying on a remote server, ensure you open the necessary ports in your firewall.
 
 ---
