@@ -197,7 +197,7 @@ class LibraryService {
             }
         }
 
-        if (!series || forceRefresh || series.id.startsWith('local-') || series.metadata_provider !== 'anilist') {
+        if (!series || forceRefresh || (series.id.startsWith('local-') && !searchQuery)) {
             const queryName = searchQuery || (series ? series.title : folderName);
             const muxConfig = await this.configService.getMuxingConfig();
             const providers = muxConfig.metadataProviders || ['crunchy', 'anilist'];
@@ -656,9 +656,23 @@ class LibraryService {
 
     async rebindSeries(oldSeriesId, match) {
         const oldSeries = await this.db.get('SELECT folder_name FROM series WHERE id = ?', oldSeriesId);
-        if (!oldSeries?.folder_name) throw new Error('Series folder not found');
+        let folderName = oldSeries?.folder_name;
 
-        const folderName = oldSeries.folder_name;
+        if (!folderName) {
+            // Try by Crunchyroll ID alias if ID is not found or has no folder
+            const byCr = await this.db.get('SELECT folder_name FROM series WHERE crunchyroll_id = ? AND folder_name IS NOT NULL', oldSeriesId);
+            folderName = byCr?.folder_name;
+            if (!folderName) {
+                // FALLBACK: If folder is missing, try to find it by ID
+                console.warn(`[Rebind] Series ${oldSeriesId} has no folder_name. Looking for existing link...`);
+                // If it's a placeholder, we just want to update the ID
+                await this.db.run('UPDATE series SET id = ?, crunchyroll_id = ?, metadata_provider = ?, needs_review = 0 WHERE id = ?', 
+                    match.id, match.id, 'crunchyroll', oldSeriesId);
+                return;
+            }
+        }
+
+        if (!folderName) throw new Error(`Series folder not found for ID or CR ID: ${oldSeriesId}`);
         let foundLibPath = null;
         for (const lp of this.libraryPaths) { if (fs.existsSync(path.join(lp, folderName))) { foundLibPath = lp; break; } }
 
@@ -708,7 +722,14 @@ class LibraryService {
                     let clean = entry.replace(/[\[\(].*?[\]\)]/g, ' ').replace(/\./g, ' ');
                     let epNum = null;
                     const m = clean.match(/S(\d+)E(\d+)/i) || clean.match(/(\d+)x(\d+)/i) || clean.match(/(?:Episode|Ep|Cap|E)\s*(\d+)/i) || clean.match(/(?:^|[\s\-\_\#])(\d+)(?:[\s\-\_\.\(]|$)/);
-                    if (m) { epNum = parseInt(m[2] || m[1]); if (epNum < 2000 && epNum > maxEp) maxEp = epNum; }
+                    if (m) { 
+                        epNum = parseInt(m[2] || m[1]); 
+                        // If it's a bare number (no explicit "E"), be more restrictive (max 500)
+                        const isExplicit = clean.match(/(?:Episode|Ep|Cap|E)\s*(\d+)/i) || clean.match(/S(\d+)E(\d+)/i);
+                        if (epNum > 0 && (isExplicit || epNum < 500) && epNum > maxEp) {
+                            maxEp = epNum; 
+                        }
+                    }
                 }
             }
         };

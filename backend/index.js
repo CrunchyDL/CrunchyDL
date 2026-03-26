@@ -56,8 +56,12 @@ app.use(async (req, res, next) => {
     next();
 });
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'database.sqlite');
-const avatarsDir = path.join(path.dirname(path.resolve(dbPath)), 'avatars');
+// Path for data storage (posters, avatars, etc.)
+const avatarsDir = path.join(__dirname, '..', 'data', 'avatars');
+
+if (!fs.existsSync(avatarsDir)) {
+    fs.mkdirSync(avatarsDir, { recursive: true });
+}
 
 app.use('/avatars', express.static(avatarsDir));
 
@@ -734,7 +738,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         if (series && series.crunchyroll_id) possibleIds.push(series.crunchyroll_id);
 
         for (const pid of possibleIds) {
-            const possibleFiles = [`${pid}.jpg`, `${pid}.png`, `${pid}.webp` ];
+            const possibleFiles = [`${pid}.jpg`, `${pid}.png`, `${pid}.webp`];
             for (const file of possibleFiles) {
                 const filePath = path.join(postersDir, file);
                 if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
@@ -745,7 +749,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         const suggestion = await db.get('SELECT image FROM suggestions WHERE series_id = ?', seriesId);
         if (suggestion && suggestion.image) {
             if (suggestion.image.startsWith('http')) return res.redirect(suggestion.image);
-            
+
             const fileName = path.basename(suggestion.image);
             const filePath = path.join(postersDir, fileName);
             if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
@@ -754,7 +758,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         // 2. Fetch from DB (handles both relative and absolute paths)
         if (series && series.image) {
             if (series.image.startsWith('http')) return res.redirect(series.image);
-            
+
             // Get just the filename in case the DB has a hardcoded Docker path (/app/data/...)
             const fileName = path.basename(series.image);
             const filePath = path.join(postersDir, fileName);
@@ -766,7 +770,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
             try {
                 const details = await anilistService.getSeriesDetails(seriesId);
                 if (details && details.image) return res.redirect(details.image);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         res.status(404).send('Poster not found');
@@ -1178,211 +1182,6 @@ app.get('/api/user/dashboard', authenticate, async (req, res) => {
     }
 });
 
-// User Profile Endpoints
-app.get('/api/user/profile', authenticate, async (req, res) => {
-    try {
-        const db = await setupDb();
-        let user;
-        try {
-            user = await db.get('SELECT id, username, role, bio, avatar_url, full_name FROM users WHERE id = ?', req.user.id);
-        } catch (e) {
-            console.warn('[Profile] Error fetching extended profile, falling back to basic data:', e.message);
-            user = await db.get('SELECT id, username, role FROM users WHERE id = ?', req.user.id);
-        }
-        res.json(user);
-    } catch (err) {
-        console.error('[Profile] Critical auth error:', err.message);
-        res.status(500).json({ error: 'Auth initialization failed' });
-    }
-});
-
-app.post('/api/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const avatarUrl = `/avatars/${req.file.filename}`;
-
-    try {
-        const db = await setupDb();
-        await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', avatarUrl, req.user.id);
-        addAuditLog(req, 'AVATAR_UPDATE', 'Custom Avatar', { url: avatarUrl });
-        res.json({ url: avatarUrl });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to persist avatar' });
-    }
-});
-
-// Subscription Routes
-app.get('/api/subscriptions', authenticate, async (req, res) => {
-    try {
-        const subs = await subService.getSubscriptions();
-        res.json(subs);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/subscriptions', authenticate, async (req, res) => {
-    const { id, title, nextEpisode, day, time, rootPath } = req.body;
-    try {
-        await subService.subscribe(id, title, nextEpisode, day, time, rootPath);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/subscriptions/:id', authenticate, async (req, res) => {
-    try {
-        await subService.unsubscribe(req.params.id);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// --- Configuration & Settings ---
-
-app.get('/api/config/muxing', authenticate, async (req, res) => {
-    try {
-        const config = await configService.getMuxingConfig();
-        const db = await setupDb();
-        const tmdbKey = await tmdbService.getApiKey(db);
-        const tvdbKey = await tvdbService.getApiKey(db);
-        res.json({ 
-            ...config, 
-            tmdbApiKey: tmdbKey,
-            tvdbApiKey: tvdbKey
-        });
-    } catch (e) {
-        res.status(500).json({ error: 'Failed to fetch config' });
-    }
-});
-
-app.post('/api/config/muxing', authenticate, async (req, res) => {
-    try {
-        const newConfig = await configService.updateMuxingConfig(req.body);
-        res.json(newConfig);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// --- System & User Activity ---
-
-app.get('/api/system/info', authenticate, (req, res) => {
-    try {
-        const cpus = os.cpus().length;
-        const totalMem = Math.round(os.totalmem() / (1024 * 1024 * 1024));
-        const freeMem = Math.round(os.freemem() / (1024 * 1024 * 1024));
-        res.json({
-            cpus,
-            totalMem,
-            freeMem,
-            platform: os.platform(),
-            release: os.release(),
-            uptime: os.uptime(),
-            loadavg: os.loadavg()
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/system/storage', authenticate, async (req, res) => {
-    try {
-        const volumes = libServiceInstance.getLibraryPaths();
-        if (!volumes || volumes.length === 0) return res.json([]);
-        const stats = await Promise.all(volumes.map(v => systemService.getDiskSpace(v)));
-        res.json(stats);
-    } catch (err) {
-        console.error('Storage info error:', err);
-        res.status(500).json({ error: 'Failed to fetch storage info' });
-    }
-});
-
-app.get('/api/system/logs', authenticate, hasPermission('sys:view-logs'), async (req, res) => {
-    try {
-        const db = await setupDb();
-        const logs = await db.all('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 200');
-        res.json(logs);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/user/dashboard', authenticate, async (req, res) => {
-    try {
-        const db = await setupDb();
-        const userId = req.user.id;
-
-        const stats = await db.get(`
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
-            FROM suggestions 
-            WHERE user_id = ?
-        `, userId);
-
-        const myRecent = await db.all(`
-            SELECT * FROM suggestions 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC 
-            LIMIT 5
-        `, userId);
-
-        const arrivals = await db.all(`
-            SELECT * FROM series 
-            ORDER BY created_at DESC 
-            LIMIT 6
-        `);
-
-        const recentEpisodes = await db.all(`
-            SELECT e.*, s.title as series_title, s.image as series_image
-            FROM episodes e
-            JOIN series s ON e.series_id = s.id
-            WHERE e.downloaded_at IS NOT NULL
-            ORDER BY e.downloaded_at DESC
-            LIMIT 6
-        `);
-
-        res.json({
-            stats: { total: stats.total || 0, approved: stats.approved || 0, pending: stats.pending || 0 },
-            recentSuggestions: myRecent,
-            newArrivals: arrivals,
-            recentEpisodes: recentEpisodes
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/user/profile', authenticate, async (req, res) => {
-    try {
-        const db = await setupDb();
-        let user;
-        try {
-            user = await db.get('SELECT id, username, role, bio, avatar_url, full_name FROM users WHERE id = ?', req.user.id);
-        } catch (e) {
-            user = await db.get('SELECT id, username, role FROM users WHERE id = ?', req.user.id);
-        }
-        res.json(user);
-    } catch (err) {
-        res.status(500).json({ error: 'Auth initialization failed' });
-    }
-});
-
-app.post('/api/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const avatarUrl = `/avatars/${req.file.filename}`;
-    try {
-        const db = await setupDb();
-        await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', avatarUrl, req.user.id);
-        addAuditLog(req, 'AVATAR_UPDATE', 'Custom Avatar', { url: avatarUrl });
-        res.json({ url: avatarUrl });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to persist avatar' });
-    }
-});
 
 // Stock Avatars Endpoints
 app.get('/api/stock-avatars', async (req, res) => {

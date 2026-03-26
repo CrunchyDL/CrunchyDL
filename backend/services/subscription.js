@@ -223,12 +223,15 @@ class SubscriptionService {
 
         // 3. AUTO CATCH-UP: If nextEpisode is 1 (default) and we have a path, scan for existing files
         let finalNextEp = nextEpisode;
-        if (finalNextEp <= 1 && finalRootPath) {
+        if (finalNextEp <= 1 && finalRootPath && series?.folder_name) {
             try {
-                const lastOnDisk = await this.libraryService.findLastEpisodeNumberOnDisk(finalRootPath);
-                if (lastOnDisk > 0) {
-                    console.log(`[Subscription] [AutoCatchUp] Found Ep ${lastOnDisk} on disk for ${title}. Starting from ${lastOnDisk + 1}`);
-                    finalNextEp = lastOnDisk + 1;
+                const scanPath = path.join(finalRootPath, series.folder_name);
+                if (fs.existsSync(scanPath)) {
+                    const lastOnDisk = await this.libraryService.findLastEpisodeNumberOnDisk(scanPath);
+                    if (lastOnDisk > 0) {
+                        console.log(`[Subscription] [AutoCatchUp] Found Ep ${lastOnDisk} on disk for ${title}. Starting from ${lastOnDisk + 1}`);
+                        finalNextEp = lastOnDisk + 1;
+                    }
                 }
             } catch (e) {
                 console.warn(`[Subscription] AutoCatchUp scan failed for ${title}:`, e.message);
