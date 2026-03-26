@@ -293,6 +293,7 @@
     "episodes_in_queue": "EPISODES IN QUEUE",
     "completed": "COMPLETED",
     "status_pending": "Pending",
+    "status_queued": "Queued",
     "status_downloading": "Downloading",
     "status_decrypting": "Decrypting",
     "status_merging": "Merging",
@@ -301,6 +302,7 @@
     "status_error": "Error",
     "auto": "AUTO",
     "manual": "MANUAL",
+    "trigger_subscription": "Subscription",
     "empty": "No items in the download queue."
   },
   "profile": {

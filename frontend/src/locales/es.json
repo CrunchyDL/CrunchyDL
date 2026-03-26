@@ -293,6 +293,7 @@
     "episodes_in_queue": "EPISODIOS EN COLA",
     "completed": "COMPLETADO",
     "status_pending": "Pendiente",
+    "status_queued": "En cola",
     "status_downloading": "Descargando",
     "status_decrypting": "Desencriptando",
     "status_merging": "Uniendo",
@@ -301,6 +302,7 @@
     "status_error": "Error",
     "auto": "AUTO",
     "manual": "MANUAL",
+    "trigger_subscription": "Suscripción",
     "empty": "No hay elementos en la cola de descarga."
   },
   "profile": {

@@ -123,8 +123,8 @@ const Downloads = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pl-10 border-l border-white/5 ml-4">
               {episodes.sort((a: any, b: any) => {
                 const getEp = (name: string) => {
-                  const m = name.match(/E(\d+)/i) || name.match(/Ep\s*(\d+)/i) || name.match(/Episode\s*(\d+)/i);
-                  return m ? parseInt(m[1]) : 0;
+                  const m = name.match(/E(\d+)/i) || name.match(/Ep\s*(\d+)/i) || name.match(/Episode\s*(\d+)/i) || name.match(/(?:^|[\s\-\_\#])(\d+)(?:[\s\-\_\.\(]|$)/);
+                  return m ? parseInt(m[2] || m[1]) : 0;
                 };
                 const epA = getEp(a.name);
                 const epB = getEp(b.name);
@@ -144,8 +144,8 @@ const Downloads = () => {
                     <div className="flex items-center gap-2">
                       <div className="text-xs font-bold text-white truncate max-w-[150px]">
                         {t('catalog.episode_label', { number: (() => {
-                          const m = dl.name.match(/E(\d+)/i) || dl.name.match(/Ep\s*(\d+)/i) || dl.name.match(/Episode\s*(\d+)/i);
-                          return m ? m[1] : dl.id;
+                          const m = dl.name.match(/E(\d+)/i) || dl.name.match(/Ep\s*(\d+)/i) || dl.name.match(/Episode\s*(\d+)/i) || dl.name.match(/(?:^|[\s\-\_\#])(\d+)(?:[\s\-\_\.\(]|$)/);
+                          return m ? (m[2] || m[1]) : dl.id;
                         })() }).toUpperCase()} 
                       </div>
                       <div className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter bg-white/5 px-1 rounded">
@@ -182,7 +182,11 @@ const Downloads = () => {
                     </div>
                     <div className="flex justify-between text-[9px] text-gray-500 font-bold uppercase">
                       <span>{dl.progress}%</span>
-                      <span>{dl.triggered_by === 'AUTO_CATCH_UP' ? t('downloads.auto') : t('downloads.manual')}</span>
+                      <span>{
+                        dl.triggered_by === 'AUTO_CATCH_UP' ? t('downloads.auto') : 
+                        dl.triggered_by === 'system:subscription' ? t('downloads.trigger_subscription') : 
+                        t('downloads.manual')
+                      }</span>
                     </div>
                   </div>
                 </div>

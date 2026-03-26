@@ -149,14 +149,14 @@ class SubscriptionService {
                         console.log(`[Subscription] Catch-up/New episode found: ${sub.title} Ep ${epNum}`);
                         
                         await this.cliService.addDownload({
-                            name: sub.title,
+                            name: `${sub.title} - Ep ${epNum}`,
                             service: 'crunchy',
                             show_id: crId,
                             season_id: ep.season_id,
                             season_number: ep.season_number,
                             episodes: epNum.toString(),
                             rootPath: sub.root_path || series.lib_path,
-                            triggered_by: 'system:subscription'
+                            triggeredBy: 'system:subscription'
                         });
                         episodesQueued++;
                     }
