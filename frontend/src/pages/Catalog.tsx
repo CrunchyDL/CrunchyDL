@@ -297,8 +297,9 @@ const Catalog: React.FC = () => {
     }
   };
 
-  const handleSuggest = async () => {
-    if (!selectedAnime || !token) return;
+  const handleSuggest = async (animeOverride?: Anime) => {
+    const anime = animeOverride || selectedAnime;
+    if (!anime || !token) return;
     setIsSuggesting(true);
     try {
       const response = await fetch('/api/suggestions', {
@@ -308,14 +309,14 @@ const Catalog: React.FC = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          series_id: selectedAnime.id,
-          title: selectedAnime.title,
-          image: selectedAnime.image
+          series_id: anime.id,
+          title: anime.title,
+          image: anime.image
         })
       });
       if (response.ok) {
         alert(t('catalog.suggestion_success'));
-        setSelectedAnime(null);
+        if (!animeOverride) setSelectedAnime(null);
       } else {
         const err = await response.json();
         alert(t('catalog.suggestion_error', { error: err.error }));
@@ -542,8 +543,20 @@ const Catalog: React.FC = () => {
                               setSelectedAnime(anime);
                             }
                           }}
+                           title={t('catalog.subscribe_weekly')}
                         >
                           {subscriptions.find(s => s.series_id === anime.id && s.active) ? <BellOff className="w-6 h-6" /> : <Bell className="w-6 h-6" />}
+                        </div>
+
+                         <div
+                          className="p-2 rounded-lg backdrop-blur-md border border-white/20 bg-black/60 text-white hover:bg-orange-500 hover:border-transparent transition-all shadow-2xl"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSuggest(anime);
+                          }}
+                          title={t('catalog.suggest_community')}
+                        >
+                          <MessageSquare className="w-6 h-6" />
                         </div>
                       </div>
                     </div>
@@ -601,16 +614,14 @@ const Catalog: React.FC = () => {
                         </button>
                       )}
 
-                      {!isContributor && (
-                        <button
-                          onClick={handleSuggest}
-                          disabled={isSuggesting}
-                          className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl shadow-orange-500/20 active:scale-95 disabled:opacity-50"
-                        >
-                          {isSuggesting ? <RefreshCw size={14} className="animate-spin" /> : <MessageSquare size={14} />}
-                          {t('catalog.suggest_community')}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleSuggest()}
+                        disabled={isSuggesting}
+                        className="flex items-center gap-2 px-6 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-xl active:scale-95 disabled:opacity-50"
+                      >
+                        {isSuggesting ? <RefreshCw size={14} className="animate-spin" /> : <MessageSquare size={14} />}
+                        {t('catalog.suggest_community')}
+                      </button>
                     </div>
 
                     {/* Actions Row 2: Download Configuration and Execution (Collaborators Only) */}
