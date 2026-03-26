@@ -1637,6 +1637,7 @@ async function start() {
         }
         
         libServiceInstance.scan();
+        libServiceInstance.startAutoRefresh();
     } catch (err) {
         console.error('Failed to start server:', err);
     }

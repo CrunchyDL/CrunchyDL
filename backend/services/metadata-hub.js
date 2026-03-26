@@ -57,6 +57,7 @@ class MetadataHub {
         } = options;
 
         const results = {};
+        const errors = {};
         const promises = providers.map(async (p) => {
             try {
                 const provider = this.providers[p];
@@ -74,7 +75,7 @@ class MetadataHub {
                 }
 
                 // Apply Filters
-                results[p] = providerResults.filter(item => {
+                results[p] = (providerResults || []).filter(item => {
                     const confidence = this.calculateSimilarity(query, item.title);
                     if (confidence < minConfidence) return false;
                     if (requirePoster && !item.image) return false;
@@ -88,11 +89,12 @@ class MetadataHub {
             } catch (err) {
                 console.error(`[MetadataHub] Error searching in ${p}:`, err.message);
                 results[p] = [];
+                errors[p] = err.message;
             }
         });
 
         await Promise.all(promises);
-        return results;
+        return { results, errors };
     }
 
     /**

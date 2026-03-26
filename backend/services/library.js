@@ -194,7 +194,7 @@ class LibraryService {
             const muxConfig = await this.configService.getMuxingConfig();
             const providers = muxConfig.metadataProviders || ['crunchy', 'anilist'];
             const metadataLang = await this.db.get('SELECT value FROM settings WHERE `key` = ?', 'metadata_language');
-            const searchResults = await metadataHub.search(queryName, {
+            const { results, errors } = await metadataHub.search(queryName, {
                 providers, 
                 minConfidence: muxConfig.minMetadataConfidence || 0.7,
                 apiKeyTMDB: muxConfig.tmdbApiKey, 
@@ -202,13 +202,15 @@ class LibraryService {
                 language: metadataLang?.value || 'en-US'
             });
 
+            const hasNetworkError = providers.some(p => errors[p]);
+
             let match = null, usedProvider = null;
             // Prioritize AniList in searches
-            if (searchResults.anilist?.length > 0) {
-                match = searchResults.anilist[0];
+            if (results.anilist?.length > 0) {
+                match = results.anilist[0];
                 usedProvider = 'anilist';
             } else {
-                for (const p of providers) { if (searchResults[p] && searchResults[p].length > 0) { match = searchResults[p][0]; usedProvider = p; break; } }
+                for (const p of providers) { if (results[p] && results[p].length > 0) { match = results[p][0]; usedProvider = p; break; } }
             }
 
             if (match) {
@@ -274,11 +276,17 @@ class LibraryService {
                     const localFile = await this._downloadPoster(match.image, finalId);
                     if (localFile) { await this.db.run('UPDATE series SET image = ? WHERE id = ?', localFile, finalId); series.image = localFile; }
                 }
-            } else if (!series) {
+            } else if (!series && !hasNetworkError) {
+                // Persistent failure with NO network errors = true local series
                 const dummyId = `local-${crypto.randomBytes(4).toString('hex')}`;
                 await this.db.run(`INSERT OR IGNORE INTO series (id, title, folder_name, needs_review, metadata_provider, lib_path) VALUES (?, ?, ?, ?, ?, ?)`,
                     dummyId, folderName, folderName, 1, 'none', libPath);
                 series = { id: dummyId, title: folderName, needs_review: 1 };
+            } else if (!series) {
+                // If there was a network error and we have NO existing series record,
+                // we'll wait for the next scan instead of creating a "permanent" local- stub now.
+                console.log(`[Library] Search for ${folderName} failed with provider errors. Will retry later.`);
+                return;
             }
         }
 
@@ -710,6 +718,24 @@ class LibraryService {
             await this.db.run('UPDATE series SET lib_path = ? WHERE lib_path = ?', resolvedNewPath, oldPath);
         }
         return true;
+    }
+
+    startAutoRefresh(intervalMs = 60 * 60 * 1000) { // Default 1 hour
+        console.log(`[Library] Starting auto-refresh for mismatched series every ${intervalMs / 1000 / 60} minutes`);
+        setInterval(() => {
+            if (!this.isScanning && !this.shouldPause()) {
+                console.log('[Library] [AutoRefresh] Checking for mismatched/local series to retry...');
+                this.refreshAllMismatched().catch(e => console.error('[Library] AutoRefresh failed:', e.message));
+            }
+        }, intervalMs);
+
+        // Also schedule a full scan every 6 hours
+        setInterval(() => {
+            if (!this.isScanning && !this.shouldPause()) {
+                console.log('[Library] [AutoScan] Starting periodic full scan...');
+                this.scan().catch(e => console.error('[Library] AutoScan failed:', e.message));
+            }
+        }, 6 * 60 * 60 * 1000);
     }
 }
 
