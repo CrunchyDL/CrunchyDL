@@ -219,7 +219,7 @@ const Profile = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-widest">Username</label>
+                                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-widest">{t('profile.username')}</label>
                                 <input 
                                     type="text" 
                                     value={formData.username}
@@ -271,7 +271,7 @@ const Profile = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-widest">Biography</label>
+                            <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-widest">{t('profile.biography')}</label>
                             <textarea 
                                 value={formData.bio}
                                 onChange={e => setFormData({...formData, bio: e.target.value})}

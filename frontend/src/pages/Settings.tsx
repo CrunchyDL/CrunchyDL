@@ -450,8 +450,8 @@ const MuxingSection = ({ config, updateConfig }: any) => {
 
              <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center justify-between ml-1">
-                    <span>Threads</span>
-                    <span className="text-gray-700 italic lowercase tracking-normal">0 = auto</span>
+                    <span>{t('settings.threads')}</span>
+                    <span className="text-gray-700 italic lowercase tracking-normal">{t('settings.threads_auto')}</span>
                 </label>
                 <input 
                     type="number"
@@ -473,22 +473,22 @@ const MuxingSection = ({ config, updateConfig }: any) => {
                   onChange={(e) => updateConfig('encodingPreset', e.target.value)}
                   className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
-                  <option value="custom">Custom (x264/x265)</option>
-                  <optgroup label="AV1 High Quality">
+                  <option value="custom">{t('settings.preset_custom')}</option>
+                  <optgroup label={t('settings.preset_av1_high_quality')}>
                     <option value="av1_1080p24">AV1 1080p24</option>
                     <option value="av1_720p24">AV1 720p24</option>
                     <option value="av1_480p24">AV1 480p24</option>
                     <option value="av1_360p24">AV1 360p24</option>
                     <option value="av1_240p24">AV1 240p24</option>
                   </optgroup>
-                  <optgroup label="H.265 (HEVC)">
+                  <optgroup label={t('settings.preset_h265_hevc')}>
                     <option value="h265_1080p24">H.265 1080p24</option>
                     <option value="h265_720p24">H.265 720p24</option>
                     <option value="h265_480p24">H.265 480p24</option>
                     <option value="h265_360p24">H.265 360p24</option>
                     <option value="h265_240p24">H.265 240p24</option>
                   </optgroup>
-                  <optgroup label="H.264 (AVC)">
+                  <optgroup label={t('settings.preset_h264_avc')}>
                     <option value="h264_1080p24">H.264 1080p24</option>
                     <option value="h264_720p24">H.264 720p24</option>
                     <option value="h264_480p24">H.264 480p24</option>
@@ -506,12 +506,12 @@ const MuxingSection = ({ config, updateConfig }: any) => {
                   disabled={config.encodingPreset?.startsWith('av1')}
                   className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary transition-all disabled:opacity-30 appearance-none cursor-pointer"
                 >
-                  <option value="none">Default</option>
-                  <option value="veryfast">Very Fast</option>
-                  <option value="fast">Fast</option>
-                  <option value="medium">Medium</option>
-                  <option value="slow">Slow</option>
-                  <option value="veryslow">Very Slow</option>
+                  <option value="none">{t('settings.preset_default')}</option>
+                  <option value="veryfast">{t('settings.preset_very_fast')}</option>
+                  <option value="fast">{t('settings.preset_fast')}</option>
+                  <option value="medium">{t('settings.preset_medium')}</option>
+                  <option value="slow">{t('settings.preset_slow')}</option>
+                  <option value="veryslow">{t('settings.preset_very_slow')}</option>
                 </select>
               </div>
             </div>
@@ -586,22 +586,22 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
         <h3 className="text-sm font-black text-gray-500 uppercase tracking-[0.2em] border-l-2 border-primary pl-3">{t('settings.api_keys')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">TMDB API Key (v3)</label>
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">{t('settings.tmdb_api_key')}</label>
                 <input 
                     type="password"
                     value={config.tmdbApiKey || ''}
                     onChange={(e) => updateConfig('tmdbApiKey', e.target.value)}
-                    placeholder="Enter API Key..."
+                    placeholder={t('settings.enter_api_key')}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-primary transition-all font-mono placeholder:text-gray-800"
                 />
             </div>
             <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">TVDB API Key (v4)</label>
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest ml-1">{t('settings.tvdb_api_key')}</label>
                 <input 
                     type="password"
                     value={config.tvdbApiKey || ''}
                     onChange={(e) => updateConfig('tvdbApiKey', e.target.value)}
-                    placeholder="Enter API Key..."
+                    placeholder={t('settings.enter_api_key')}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-xs text-white focus:outline-none focus:border-primary transition-all font-mono placeholder:text-gray-800"
                 />
             </div>
@@ -904,10 +904,10 @@ const Settings = () => {
   };
 
   const tabs = [
-    { id: 'account', label: 'Crunchyroll', icon: User },
+    { id: 'account', label: t('library.crunchyroll'), icon: User },
     { id: 'downloads', label: t('sidebar.downloads'), icon: Download },
     { id: 'library', label: t('sidebar.library'), icon: Library },
-    { id: 'system', label: 'System', icon: Cpu },
+    { id: 'system', label: t('settings.tab_system'), icon: Cpu },
   ];
 
   return (

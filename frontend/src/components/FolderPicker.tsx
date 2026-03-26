@@ -58,7 +58,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ isOpen, onClose, onSelect, 
                         </div>
                         <div>
                             <h3 className="text-lg font-bold text-white leading-tight">{t('sidebar.library')}</h3>
-                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">{currentPath === 'root' ? 'Drives' : currentPath}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">{currentPath === 'root' ? t('common.drives') : currentPath}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
@@ -99,7 +99,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ isOpen, onClose, onSelect, 
                             {directories.length === 0 && (
                                 <div className="flex flex-col items-center justify-center h-64 text-center p-8">
                                     <Folder className="w-12 h-12 text-white/5 mb-4" />
-                                    <p className="text-muted-foreground text-sm">Este directorio está vacío</p>
+                                    <p className="text-muted-foreground text-sm">{t('common.empty_directory')}</p>
                                 </div>
                             )}
                             {directories.map((dir, idx) => (

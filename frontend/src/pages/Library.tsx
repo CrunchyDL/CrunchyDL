@@ -452,7 +452,7 @@ const Library = () => {
                     <button 
                       onClick={(e) => handleApproveSeries(item.id, e)}
                       className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-full shadow-xl border border-white/20 transition-all hover:scale-110 active:scale-95"
-                      title="Confirm Metadata matches Folder"
+                      title={t('library.confirm_metadata_tooltip')}
                     >
                       <CheckCircle size={18} />
                     </button>

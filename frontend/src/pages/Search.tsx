@@ -228,8 +228,8 @@ const Search = () => {
               onChange={(e) => setService(e.target.value)}
               className="bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 transition-all font-bold"
             >
-              <option value="crunchy">Crunchyroll</option>
-              <option value="hidive">HIDIVE</option>
+              <option value="crunchy">{t('library.crunchyroll')}</option>
+              <option value="hidive">{t('library.hidive')}</option>
               <option value="anilist">{t('search.anilist_mal')}</option>
               <option value="tmdb">{t('search.tmdb_meta')}</option>
               <option value="tvdb">{t('search.tvdb_meta')}</option>
@@ -434,7 +434,7 @@ const Search = () => {
 
                   {episodes.length > 0 && (
                     <div>
-                      <h3 className="text-xl font-semibold text-white mb-4">Episodes</h3>
+                      <h3 className="text-xl font-semibold text-white mb-4">{t('search.episodes_header')}</h3>
                       <div className="space-y-3">
                         {episodes.map((ep) => {
                           const epStatus = episodeStatus[ep.id] || episodeStatus[`number-${ep.episode_number}`];

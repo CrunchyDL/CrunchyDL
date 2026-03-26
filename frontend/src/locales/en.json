@@ -20,7 +20,9 @@
     "spring": "Spring",
     "summer": "Summer",
     "fall": "Fall",
-    "create": "Create"
+    "create": "Create",
+    "drives": "Drives",
+    "empty_directory": "This directory is empty"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -79,7 +81,8 @@
     "remove_from_archive": "Remove from archive",
     "mark_as_owned": "Mark as owned (Archive)",
     "delete_physical": "Delete physical file",
-    "in_library_short": "Library"
+    "in_library_short": "Library",
+    "episodes_header": "Episodes"
   },
   "catalog": {
     "seasonal": "Seasonal",
@@ -133,7 +136,7 @@
     "suggestion_error": "Error: {{error}}",
     "suggestion_conn_error": "Connection error while sending suggestion",
     "all_in_library": "All episodes are already in the library!",
-    "in_library_short": "Library"
+    "in_library_short": "In Library"
   },
   "all_series": {
     "title_main": "Complete",
@@ -163,8 +166,9 @@
     "english": "English",
     "spanish": "Spanish",
     "role_admin": "Admin",
+    "role_contributor": "Contributor",
     "role_user": "User",
-    "mode": "{{role}} Mode"
+    "mode": "Mode {{role}}"
   },
   "suggestions": {
     "title": "Community Suggestions",
@@ -190,6 +194,7 @@
     "tvdb": "TVDB",
     "local": "Local",
     "crunchyroll": "Crunchyroll",
+    "hidive": "HIDIVE",
     "newest_first": "Newest First",
     "oldest_first": "Oldest First",
     "name_az": "Name (A-Z)",
@@ -227,7 +232,8 @@
     "refresh_all_mismatched": "Refresh All Mismatched",
     "no_matches_found": "No matches found. Try a different search.",
     "search_prompt": "Search for a series to see potential matches.",
-    "error_handling_subscription": "Error handling subscription"
+    "error_handling_subscription": "Error handling subscription",
+    "confirm_metadata_tooltip": "Confirm Metadata matches Folder"
   },
   "admin": {
     "title_system": "System",
@@ -352,6 +358,16 @@
     "encoding_profiles": "Encoding Profiles",
     "res_preset": "Resolution Preset",
     "speed_preset": "Encoding Speed (Preset)",
+    "preset_custom": "Custom (x264/x265)",
+    "preset_av1_high_quality": "AV1 High Quality",
+    "preset_h265_hevc": "H.265 (HEVC)",
+    "preset_h264_avc": "H.264 (AVC)",
+    "preset_default": "Default",
+    "preset_very_fast": "Very Fast",
+    "preset_fast": "Fast",
+    "preset_medium": "Medium",
+    "preset_slow": "Slow",
+    "preset_very_slow": "Very Slow",
     "provider_priority": "Provider Priority",
     "priority_desc": "Order for automated metadata matching",
     "api_keys": "External API Keys",
@@ -359,6 +375,10 @@
     "concurrency_desc": "Parallel series processing (default: 4)",
     "auto_scan": "Auto-Scan Library",
     "auto_scan_desc": "Trigger library scan after each download",
+    "tmdb_api_key": "TMDB API Key (v3)",
+    "tvdb_api_key": "TVDB API Key (v4)",
+    "enter_api_key": "Enter API Key...",
+    "tab_system": "System",
     "environment": "Environment",
     "os_desc": "OS Platform & Version",
     "software_version": "Software Version",

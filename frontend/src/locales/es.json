@@ -20,7 +20,9 @@
     "spring": "Primavera",
     "summer": "Verano",
     "fall": "Otoño",
-    "create": "Crear"
+    "create": "Crear",
+    "drives": "Discos",
+    "empty_directory": "Este directorio está vacío"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -79,7 +81,8 @@
     "remove_from_archive": "Quitar del archivo",
     "mark_as_owned": "Marcar como tenido (Archivo)",
     "delete_physical": "Eliminar archivo físico",
-    "in_library_short": "Librería"
+    "in_library_short": "Librería",
+    "episodes_header": "Episodios"
   },
   "catalog": {
     "seasonal": "Temporada",
@@ -133,7 +136,7 @@
     "suggestion_error": "Error: {{error}}",
     "suggestion_conn_error": "Error de conexión al enviar la sugerencia",
     "all_in_library": "¡Todos los episodios ya están en la biblioteca!",
-    "in_library_short": "Librería"
+    "in_library_short": "En Librería"
   },
   "all_series": {
     "title_main": "Catálogo",
@@ -163,6 +166,7 @@
     "english": "Inglés",
     "spanish": "Español",
     "role_admin": "Admin",
+    "role_contributor": "Contribuidor",
     "role_user": "Usuario",
     "mode": "Modo {{role}}"
   },
@@ -190,6 +194,7 @@
     "tvdb": "TVDB",
     "local": "Local",
     "crunchyroll": "Crunchyroll",
+    "hidive": "HIDIVE",
     "newest_first": "Más Nuevos Primero",
     "oldest_first": "Más Antiguos Primero",
     "name_az": "Nombre (A-Z)",
@@ -227,7 +232,8 @@
     "refresh_all_mismatched": "Actualizar todos los no coincidentes",
     "no_matches_found": "No se encontraron coincidencias. Pruebe una búsqueda diferente.",
     "search_prompt": "Busque una serie para ver posibles coincidencias.",
-    "error_handling_subscription": "Error al gestionar la suscripción"
+    "error_handling_subscription": "Error al gestionar la suscripción",
+    "confirm_metadata_tooltip": "Confirmar que los metadatos coinciden con la carpeta"
   },
   "admin": {
     "title_system": "Sistema",
@@ -352,6 +358,16 @@
     "encoding_profiles": "Perfiles de Codificación",
     "res_preset": "Ajuste de Resolución",
     "speed_preset": "Velocidad de Codificación",
+    "preset_custom": "Personalizado (x264/x265)",
+    "preset_av1_high_quality": "AV1 Alta Calidad",
+    "preset_h265_hevc": "H.265 (HEVC)",
+    "preset_h264_avc": "H.264 (AVC)",
+    "preset_default": "Por defecto",
+    "preset_very_fast": "Muy Rápido",
+    "preset_fast": "Rápido",
+    "preset_medium": "Medio",
+    "preset_slow": "Lento",
+    "preset_very_slow": "Muy Lento",
     "provider_priority": "Prioridad de Proveedores",
     "priority_desc": "Orden para la coincidencia automatizada de metadatos",
     "api_keys": "Claves API Externas",
@@ -359,6 +375,10 @@
     "concurrency_desc": "Procesamiento en paralelo de series (por defecto: 4)",
     "auto_scan": "Auto-Escaneo de Librería",
     "auto_scan_desc": "Activar escaneo de librería después de cada descarga",
+    "tmdb_api_key": "Clave API de TMDB (v3)",
+    "tvdb_api_key": "Clave API de TVDB (v4)",
+    "enter_api_key": "Introduce la Clave API...",
+    "tab_system": "Sistema",
     "environment": "Entorno",
     "os_desc": "Plataforma y Versión del SO",
     "software_version": "Versión del Software",
