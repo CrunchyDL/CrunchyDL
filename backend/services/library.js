@@ -138,7 +138,15 @@ class LibraryService {
                     if (this.shouldPause()) break;
                     const item = queue.shift();
                     if (!item) break;
-                    try { await this.syncSeries(item.libPath, item.folderName); } catch (e) { console.error(`[Library] Sync error ${item.folderName}:`, e.message); }
+                    try { 
+                        // Set a timeout for individual sync operations (e.g. 30s)
+                        await Promise.race([
+                            this.syncSeries(item.libPath, item.folderName),
+                            new Promise((_, reject) => setTimeout(() => reject(new Error('Sync timeout')), 60000))
+                        ]);
+                    } catch (e) { 
+                        console.error(`[Library] [CRITICAL_HANG_PREVENTION] Sync error ${item.folderName}:`, e.message); 
+                    }
                 }
             });
             await Promise.all(workers);

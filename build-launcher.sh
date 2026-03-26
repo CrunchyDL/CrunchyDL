@@ -7,6 +7,7 @@ if [ ! -d "node_modules" ]; then
 fi
 echo "Compiling binaries..."
 npm run build:linux
-npm run build:win
 echo ""
-echo "Binaries are available in launcher/bin/"
+echo "Copying launcher to project root..."
+cp dist/*.AppImage ../CrunchyDL-Launcher.AppImage
+echo "Binaries are available in project root: CrunchyDL-Launcher.AppImage"

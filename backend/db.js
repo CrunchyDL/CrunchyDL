@@ -162,7 +162,16 @@ function normalizeSchema(sql, type) {
                   .replace(/UPDATE OR IGNORE/gi, 'UPDATE IGNORE')
                   .replace(/INSERT OR REPLACE INTO/gi, 'REPLACE INTO')
                   .replace(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, 'CREATE $1 INDEX $2 ON $3')
-                  .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT');
+                  .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT')
+                  .replace(/INSERT INTO (\w+) \((.*?)\) VALUES \((.*?)\) ON CONFLICT\((.*?)\) DO UPDATE SET (.*)/gi, (match, table, cols, vals, conflictCol, update) => {
+                      // Convert SQLite ON CONFLICT to MySQL ON DUPLICATE KEY UPDATE
+                      const mysqlUpdate = update.replace(/excluded\./g, 'VALUES(').replace(/,/g, '),').replace(/$/, ')');
+                      // Actually simpler for just one field like 'value':
+                      if (update.includes('value = excluded.value')) {
+                          return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON DUPLICATE KEY UPDATE value = VALUES(value)`;
+                      }
+                      return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON DUPLICATE KEY UPDATE ${update.replace(/excluded\./g, 'VALUES(')}`;
+                  });
     }
     return sql;
 }

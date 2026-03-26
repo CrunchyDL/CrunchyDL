@@ -1,4 +1,7 @@
 @echo off
-cd launcher
-node index.js
-pause
+if exist "launcher\bin\crunchydl-launcher.exe" (
+    start "" "launcher\bin\crunchydl-launcher.exe"
+) else (
+    cd launcher
+    npm start
+)

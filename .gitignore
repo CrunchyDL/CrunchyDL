@@ -55,3 +55,6 @@ frontend/public/
 shaka-packager.exe
 packager-win-x64.exe
 mp4decrypter.exe
+
+# Launcher Executables
+CrunchyDL-Launcher.exe

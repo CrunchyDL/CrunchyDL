@@ -632,6 +632,7 @@ app.get('/api/settings/library-roots', async (req, res) => {
         const roots = setting && setting.value ? JSON.parse(setting.value) : [];
         res.json(roots);
     } catch (err) {
+        console.error('[API] GET /api/settings/library-roots ERROR:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -647,6 +648,7 @@ app.post('/api/settings/library-roots', async (req, res) => {
         }
         res.json({ success: true });
     } catch (err) {
+        console.error('[API] POST /api/settings/library-roots ERROR:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -727,7 +729,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         const db = await setupDb();
         const series = await db.get('SELECT crunchyroll_id, image FROM series WHERE id = ?', seriesId);
 
-        // 1. Heuristic Discovery: Try to find file by ID or CR alias
+        // 1. Discovery by ID or CR alias (filenames like tmdb-XXXX.jpg or GXXXX.jpg)
         const possibleIds = [seriesId];
         if (series && series.crunchyroll_id) possibleIds.push(series.crunchyroll_id);
 
@@ -735,35 +737,26 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
             const possibleFiles = [`${pid}.jpg`, `${pid}.png`, `${pid}.webp`];
             for (const file of possibleFiles) {
                 const filePath = path.join(postersDir, file);
-                if (fs.existsSync(filePath)) {
-                    return res.sendFile(filePath);
-                }
+                if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
             }
         }
 
-        // 2. Fetch from DB if heuristic failed (custom filenames)
+        // 2. Fetch from DB (handles both relative and absolute paths)
         if (series && series.image) {
-            if (series.image.endsWith('.jpg') && !series.image.startsWith('http')) {
-                const filePath = path.join(postersDir, series.image);
-                if (fs.existsSync(filePath)) {
-                    return res.sendFile(filePath);
-                }
-            }
-            if (series.image.startsWith('http')) {
-                return res.redirect(series.image);
-            }
+            if (series.image.startsWith('http')) return res.redirect(series.image);
+            
+            // Get just the filename in case the DB has a hardcoded Docker path (/app/data/...)
+            const fileName = path.basename(series.image);
+            const filePath = path.join(postersDir, fileName);
+            if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
         }
 
-        // 3. Fallback for AniList IDs (for suggestions/browsing)
+        // 3. Fallback for AniList IDs
         if (seriesId.startsWith('al-')) {
             try {
                 const details = await anilistService.getSeriesDetails(seriesId);
-                if (details && details.image) {
-                    return res.redirect(details.image);
-                }
-            } catch (e) {
-                // Ignore and fall through to 404
-            }
+                if (details && details.image) return res.redirect(details.image);
+            } catch (e) {}
         }
 
         res.status(404).send('Poster not found');
@@ -939,26 +932,7 @@ app.post('/api/library/episodes/:id/toggle-downloaded', async (req, res) => {
     }
 });
 
-// Serving posters...
-app.get('/api/library/series/:id/poster', async (req, res) => {
-    try {
-        const db = await setupDb();
-        const series = await db.get('SELECT image FROM series WHERE id = ?', req.params.id);
-        if (!series || !series.image) return res.status(404).send('Not found');
-
-        // Final docker path from docker-compose.yml montaje: ./data:/app/data
-        const fileName = path.basename(series.image);
-        const posterPath = path.join('/app/data/posters', fileName);
-
-        if (fs.existsSync(posterPath)) {
-            res.sendFile(path.resolve(posterPath));
-        } else {
-            res.status(404).send('File not found: ' + posterPath);
-        }
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
+// Serve library series...
 
 app.get('/api/library/series', authenticate, async (req, res) => {
     try {
@@ -987,30 +961,7 @@ app.get('/api/library/series/:id', authenticate, async (req, res) => {
     }
 });
 
-app.get('/api/library/series/:id/poster', async (req, res) => {
-    try {
-        const db = await setupDb();
-        const series = await db.get('SELECT image FROM series WHERE id = ?', req.params.id);
-        if (!series || !series.image) return res.status(404).send('Not found');
-
-        // Use the absolute /data/posters path for Docker persistence
-        let posterPath = series.image;
-        if (!path.isAbsolute(posterPath)) {
-            // If it's just the filename (e.g. "1.jpg"), join with /data/posters
-            const fileName = path.basename(posterPath);
-            posterPath = path.join('/data/posters', fileName);
-        }
-
-        if (fs.existsSync(posterPath)) {
-            res.sendFile(posterPath);
-        } else {
-            console.error(`[PosterProxy] 404: File not found at: ${posterPath}`);
-            res.status(404).send('File not found on disk');
-        }
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
-});
+// Serving library metadata...
 
 // Config Routes
 app.get('/api/config/muxing', authenticate, hasPermission('sys:manage-users'), async (req, res) => {

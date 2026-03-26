@@ -7,7 +7,9 @@ if not exist node_modules (
 )
 echo Compiling binaries...
 call npm run build:win
-call npm run build:linux
 echo.
-echo Binaries are available in launcher/bin/
+echo Copying launcher to project root...
+copy "dist\CrunchyDL Launcher 1.0.0.exe" "..\CrunchyDL-Launcher.exe" /Y
+echo.
+echo Binaries are available in project root: CrunchyDL-Launcher.exe
 pause
