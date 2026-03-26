@@ -222,7 +222,11 @@ class LibraryService {
             }
 
             if (match) {
-                const needsReview = this.calculateSimilarity(folderName, match.title) < 0.7 ? 1 : 0;
+                let needsReview = this.calculateSimilarity(folderName, match.title) < 0.7 ? 1 : 0;
+                // If the series already exists and was previously approved (needs_review === 0), respect that
+                if (series && series.needs_review === 0 && !forceRefresh) {
+                    needsReview = 0;
+                }
                 let finalId = match.id, crLinkId = match.crunchyroll_id || (usedProvider === 'crunchy' ? match.id : (series ? series.crunchyroll_id : null));
 
                 // If match is not AniList but we want to prioritize it, try to find the AL ID
@@ -665,9 +669,9 @@ class LibraryService {
         const metaProvider = match.source === 'crunchyroll' ? 'crunchy' : (match.source || 'none');
         const crId = (metaProvider === 'crunchy') ? match.id : (match.crunchyroll_id || null);
 
-        if (existing) await this.db.run(`UPDATE series SET title = ?, description = ?, image = ?, folder_name = ?, mal_id = ?, metadata_provider = ?, lib_path = ?, crunchyroll_id = ? WHERE id = ?`,
+        if (existing) await this.db.run(`UPDATE series SET title = ?, description = ?, image = ?, folder_name = ?, mal_id = ?, metadata_provider = ?, lib_path = ?, crunchyroll_id = ?, needs_review = 0 WHERE id = ?`,
             match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId, match.id);
-        else await this.db.run(`INSERT INTO series (id, title, description, image, folder_name, mal_id, metadata_provider, lib_path, crunchyroll_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        else await this.db.run(`INSERT INTO series (id, title, description, image, folder_name, mal_id, metadata_provider, lib_path, crunchyroll_id, needs_review) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
             match.id, match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId);
 
         if (match.image) {

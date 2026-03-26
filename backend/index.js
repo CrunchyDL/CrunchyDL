@@ -734,11 +734,21 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         if (series && series.crunchyroll_id) possibleIds.push(series.crunchyroll_id);
 
         for (const pid of possibleIds) {
-            const possibleFiles = [`${pid}.jpg`, `${pid}.png`, `${pid}.webp`];
+            const possibleFiles = [`${pid}.jpg`, `${pid}.png`, `${pid}.webp` ];
             for (const file of possibleFiles) {
                 const filePath = path.join(postersDir, file);
                 if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
             }
+        }
+
+        // 1.5 Fallback for Suggestions (if not in series table)
+        const suggestion = await db.get('SELECT image FROM suggestions WHERE series_id = ?', seriesId);
+        if (suggestion && suggestion.image) {
+            if (suggestion.image.startsWith('http')) return res.redirect(suggestion.image);
+            
+            const fileName = path.basename(suggestion.image);
+            const filePath = path.join(postersDir, fileName);
+            if (fs.existsSync(filePath)) return res.sendFile(path.resolve(filePath));
         }
 
         // 2. Fetch from DB (handles both relative and absolute paths)
@@ -1036,6 +1046,14 @@ app.post('/api/suggestions', authenticate, async (req, res) => {
             'INSERT INTO suggestions (user_id, series_id, title, image) VALUES (?, ?, ?, ?)',
             req.user.id, series_id, title, image
         );
+
+        // Download poster asynchronously so it's available on the dashboard
+        if (image && image.startsWith('http') && libServiceInstance) {
+            libServiceInstance._downloadPoster(image, series_id).catch(e => {
+                console.error('[Suggestions] Poster download failed:', e.message);
+            });
+        }
+
         addAuditLog(req, 'SUGGESTION_ADD', title);
         res.json({ success: true });
     } catch (err) {
