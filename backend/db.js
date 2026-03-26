@@ -176,6 +176,27 @@ function normalizeSchema(sql, type) {
     return sql;
 }
 
+// Helper to ensure columns exist in a table
+async function ensureColumns(db, table, columns, dbType) {
+    try {
+        const tableInfo = await db.all(dbType === 'mysql' ? `SHOW COLUMNS FROM ${table}` : `PRAGMA table_info(${table})`);
+        const existingCols = dbType === 'mysql' ? tableInfo.map(c => c.Field) : tableInfo.map(c => c.name);
+        
+        for (const [col, type] of Object.entries(columns)) {
+            if (!existingCols.includes(col)) {
+                console.log(`[DB] Migrating: Adding column ${col} to ${table} table`);
+                try {
+                    await db.run(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+                } catch (e) {
+                    console.warn(`[DB] Migration warning for ${table}.${col}:`, e.message);
+                }
+            }
+        }
+    } catch (err) {
+        console.error(`[DB] Failed to verify columns for ${table}:`, err.message);
+    }
+}
+
 async function setupDb(configInput = null) {
     if (dbInstance && !configInput) return dbInstance;
     if (dbPromise && !configInput) return dbPromise;
@@ -278,6 +299,31 @@ async function setupDb(configInput = null) {
                     }
                 }
             }
+            
+            // Ensure additional columns for schema evolution
+            const dbType = config.dbType || 'sqlite';
+            await ensureColumns(db, 'users', {
+                'full_name': 'TEXT',
+                'bio': 'TEXT',
+                'avatar_url': 'TEXT',
+                'must_change_password': 'INTEGER DEFAULT 0'
+            }, dbType);
+
+            await ensureColumns(db, 'series', {
+                'needs_review': 'INTEGER DEFAULT 0',
+                'lib_path': 'TEXT',
+                'is_airing': 'INTEGER DEFAULT 0',
+                'mal_id': 'INTEGER',
+                'crunchyroll_id': 'VARCHAR(255)'
+            }, dbType);
+
+            await ensureColumns(db, 'seasons', {
+                'episode_count': 'INTEGER'
+            }, dbType);
+
+            await ensureColumns(db, 'episodes', {
+                'downloaded_at': 'DATETIME'
+            }, dbType);
 
             // Persistence directories for MySQL (SQLite handles its own above)
             if (config.dbType === 'mysql') {
