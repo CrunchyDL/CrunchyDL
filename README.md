@@ -95,6 +95,28 @@ Visit `http://localhost:3001` to use the application.
 
 ---
 
+## 🖥️ Desktop Launcher (System Tray)
+
+For a more integrated experience on Windows and Linux, we provide a lightweight System Tray launcher that allows you to start the server and open the web interface from your taskbar.
+
+### 1. Build the Launcher
+Before using it for the first time, you need to compile the binary:
+
+**Windows:**
+- Double-click `build-launcher.bat`
+
+**Linux:**
+- Run `bash build-launcher.sh`
+
+### 2. Run the Launcher
+Once built, you can start it using:
+- **Windows**: Double-click `start-launcher.bat` or run `launcher-bin/crunchydl-launcher.exe`
+- **Linux**: Run `launcher-bin/crunchydl-launcher` (ensure it has execute permissions: `chmod +x`)
+
+Right-click the **orange icon** in your system tray to access the menu.
+
+---
+
 ## 🔐 DRM & CDM Configuration
 
 This application uses the `multi-downloader-nx` core for decryption. To enable high-quality downloading (1080p+), you must provide your own CDM (Content Decryption Module) files.

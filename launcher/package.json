@@ -1,0 +1,29 @@
+{
+  "name": "launcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "build:win": "pkg . --targets node18-win-x64 --output bin/crunchydl-launcher.exe",
+    "build:linux": "pkg . --targets node18-linux-x64 --output bin/crunchydl-launcher"
+  },
+  "pkg": {
+    "assets": [
+      "icon.png",
+      "node_modules/systray2/bin/**/*"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "open": "^11.0.0",
+    "shelljs": "^0.10.0",
+    "systray2": "^2.1.4"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}
