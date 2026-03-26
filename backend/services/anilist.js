@@ -39,15 +39,15 @@ class AnilistService {
                 if (error.response && error.response.status === 429 && item.retryCount < 5) {
                     const retryAfter = parseInt(error.response.headers['retry-after']) || (item.retryCount + 1) * 2;
                     console.warn(`[AniList] Rate limited (429). Retrying in ${retryAfter}s...`);
-                    
+
                     // Put back in front of queue after delay
                     setTimeout(() => {
                         this.queue.unshift({ ...item, retryCount: item.retryCount + 1 });
                         this._processQueue();
                     }, retryAfter * 1000);
-                    
+
                     // Break this worker's loop to wait for the retry
-                    break; 
+                    break;
                 }
                 item.reject(error);
             }
@@ -62,7 +62,7 @@ class AnilistService {
         if (cached && (Date.now() - cached.timestamp < this.cacheTTL)) {
             return cached.data;
         }
-            const graphqlQuery = `
+        const graphqlQuery = `
             query ($search: String) {
                 Page(perPage: 5) {
                     media(search: $search, type: ANIME) {

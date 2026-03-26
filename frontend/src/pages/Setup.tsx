@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Database, User, Shield, Check, Server, Save, ArrowRight, Loader2 } from 'lucide-react';
+import { Database, User, Shield, Check, Server, Save, ArrowRight, Loader2, Plus, Trash2, Folder } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import FolderPicker from '../components/FolderPicker';
 
 const CR_LANGS = [
     { locale: 'ar-SA', code: 'ara', name: 'Arabic' },
@@ -34,10 +36,14 @@ const CR_LANGS = [
 
 const Setup = () => {
     const { t } = useTranslation();
+    const { setupStatus } = useAuth();
     const [step, setStep] = useState(1);
+    const [isPickerOpen, setIsPickerOpen] = useState(false);
+    const [activeRootIndex, setActiveRootIndex] = useState<number | null>(null);
     const [dbType, setDbType] = useState<'sqlite' | 'mysql'>('sqlite');
-    const [config, setConfig] = useState({
+    const [config, setConfig] = useState<any>({
         sqlitePath: './data/database.sqlite',
+        libraryRoots: [],
         mysql: {
             host: 'localhost',
             user: 'root',
@@ -66,6 +72,12 @@ const Setup = () => {
     });
     const [isInstalling, setIsInstalling] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (setupStatus?.env?.recommended_roots && config.libraryRoots.length === 0) {
+            setConfig((prev: any) => ({ ...prev, libraryRoots: setupStatus.env.recommended_roots }));
+        }
+    }, [setupStatus, config.libraryRoots.length]);
 
     const handleInstall = async () => {
         if (config.admin.password !== config.admin.confirmPassword) {
@@ -103,7 +115,8 @@ const Setup = () => {
                 subP2: config.subP2,
                 subP3: config.subP3,
                 defaultAudio: config.defaultAudio,
-                defaultSub: config.defaultSub
+                defaultSub: config.defaultSub,
+                libraryRoots: config.libraryRoots
             };
             const response = await axios.post('/api/setup/install', payload);
             if (response.data.token) {
@@ -445,6 +458,84 @@ const Setup = () => {
                                 {t('common.back')}
                             </button>
                              <button
+                                onClick={() => setStep(5)}
+                                disabled={isInstalling}
+                                className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all group disabled:opacity-50"
+                            >
+                                {isInstalling ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" /> {t('common.loading')}...
+                                    </>
+                                ) : (
+                                    <>
+                                        {t('setup.continue')} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                );
+            case 5:
+                return (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold text-white mb-2">{t('sidebar.library')}</h2>
+                            <p className="text-muted-foreground">{t('setup.library_desc_long') || 'Define basedir for downloads and library.'}</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                {config.libraryRoots.map((root: string, index: number) => (
+                                    <div key={index} className="flex gap-2 animate-in slide-in-from-bottom-2">
+                                        <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-lg px-3">
+                                            <Folder className="w-4 h-4 text-muted-foreground mr-3" />
+                                            <input
+                                                type="text"
+                                                value={root}
+                                                onChange={(e) => {
+                                                    const newRoots = [...config.libraryRoots];
+                                                    newRoots[index] = e.target.value;
+                                                    setConfig({ ...config, libraryRoots: newRoots });
+                                                }}
+                                                className="w-full bg-transparent p-3 text-white focus:outline-none text-sm"
+                                                placeholder={setupStatus?.env?.is_windows ? "E:\\Anime" : "/data/anime"}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    setActiveRootIndex(index);
+                                                    setIsPickerOpen(true);
+                                                }}
+                                                className="p-2 hover:bg-white/10 text-primary rounded-lg transition-colors border-l border-white/10 ml-2"
+                                            >
+                                                <Folder className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const newRoots = config.libraryRoots.filter((_: any, i: number) => i !== index);
+                                                setConfig({ ...config, libraryRoots: newRoots });
+                                            }}
+                                            className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={() => setConfig({ ...config, libraryRoots: [...config.libraryRoots, ''] })}
+                                    className="w-full border-2 border-dashed border-white/10 hover:border-primary/50 hover:bg-primary/5 text-muted-foreground hover:text-primary p-4 rounded-xl flex items-center justify-center gap-2 transition-all mt-4"
+                                >
+                                    <Plus className="w-5 h-5" /> {t('setup.add_folder') || 'Add Folder'}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setStep(4)}
+                                className="flex-1 border border-white/10 hover:bg-white/5 text-white font-bold h-12 rounded-xl transition-all"
+                            >
+                                {t('common.back')}
+                            </button>
+                            <button
                                 onClick={handleInstall}
                                 disabled={isInstalling}
                                 className="flex-[2] bg-primary hover:bg-primary-hover text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
@@ -467,6 +558,19 @@ const Setup = () => {
 
     return (
         <div className="min-h-screen w-screen flex items-center justify-center bg-background p-4 overflow-hidden relative">
+            <FolderPicker
+                isOpen={isPickerOpen}
+                initialPath={activeRootIndex !== null ? config.libraryRoots[activeRootIndex] : 'root'}
+                onClose={() => setIsPickerOpen(false)}
+                onSelect={(path) => {
+                    if (activeRootIndex !== null) {
+                        const newRoots = [...config.libraryRoots];
+                        newRoots[activeRootIndex] = path;
+                        setConfig({ ...config, libraryRoots: newRoots });
+                    }
+                    setIsPickerOpen(false);
+                }}
+            />
             {/* Ambient Background Blur */}
             <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse" />
             <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse duration-700" />
@@ -487,6 +591,7 @@ const Setup = () => {
                                 <div className={`h-1.5 w-8 rounded-full transition-all ${step === 2 ? 'bg-primary' : 'bg-white/20'}`} />
                                 <div className={`h-1.5 w-8 rounded-full transition-all ${step === 3 ? 'bg-primary' : 'bg-white/20'}`} />
                                 <div className={`h-1.5 w-8 rounded-full transition-all ${step === 4 ? 'bg-primary' : 'bg-white/20'}`} />
+                                <div className={`h-1.5 w-8 rounded-full transition-all ${step === 5 ? 'bg-primary' : 'bg-white/20'}`} />
                             </div>
                         </div>
                     </div>

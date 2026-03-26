@@ -14,10 +14,12 @@ class LibraryService {
     constructor(db, cliService) {
         this.db = db;
         this.cliService = cliService;
-        const pathsStr = process.env.LIBRARY_PATHS || process.env.DOWNLOAD_DIR || './downloads';
-        this.libraryPaths = pathsStr.split(',').map(p => path.resolve(p.trim()));
         this.downloadDir = path.resolve(process.env.DOWNLOAD_DIR || './downloads');
         this.isScanning = false;
+        this.libraryPaths = [];
+        // Initial fallback, will be updated by index.js after DB is ready
+        const pathsStr = process.env.LIBRARY_PATHS || process.env.DOWNLOAD_DIR || './downloads';
+        this.libraryPaths = pathsStr.split(',').map(p => path.resolve(p.trim()));
 
         const ConfigService = require('./config');
         this.configService = new ConfigService();
@@ -25,6 +27,25 @@ class LibraryService {
         const dbPath = process.env.DB_PATH || './data/database.sqlite';
         this.postersDir = path.join(path.dirname(path.resolve(dbPath)), 'posters');
         if (!fs.existsSync(this.postersDir)) fs.mkdirSync(this.postersDir, { recursive: true });
+    }
+
+    async updateLibraryPaths() {
+        const setting = await this.db.get('SELECT value FROM settings WHERE `key` = ?', 'library_roots');
+        if (setting && setting.value) {
+            try {
+                const roots = JSON.parse(setting.value);
+                if (Array.isArray(roots)) {
+                    this.libraryPaths = roots.map(p => path.resolve(p.trim()));
+                    console.log(`[Library] Loaded ${this.libraryPaths.length} roots from DB.`);
+                    return;
+                }
+            } catch (e) {
+                console.error('[Library] Failed to parse library_roots setting:', e.message);
+            }
+        }
+        const pathsStr = process.env.LIBRARY_PATHS || process.env.DOWNLOAD_DIR || './downloads';
+        this.libraryPaths = pathsStr.split(',').map(p => path.resolve(p.trim()));
+        console.log(`[Library] Using fallback roots from ENV: ${this.libraryPaths.length}`);
     }
 
     shouldPause() {
@@ -91,13 +112,21 @@ class LibraryService {
             const concurrency = parseInt(muxConfig.scanConcurrency) || 4;
 
             const allFolders = [];
+            console.log(`[Library] Scanning ${this.libraryPaths.length} library paths:`, this.libraryPaths);
             for (const libPath of this.libraryPaths) {
-                if (!fs.existsSync(libPath)) continue;
+                if (!fs.existsSync(libPath)) {
+                    console.log(`[Library] [Warning] Library path does not exist or is not readable: ${libPath}`);
+                    continue;
+                }
                 const folders = fs.readdirSync(libPath).filter(f => {
                     const fullPath = path.resolve(path.join(libPath, f));
                     if (fullPath === this.downloadDir || f.toLowerCase() === 'downloads') return false;
-                    try { return fs.statSync(fullPath).isDirectory(); } catch { return false; }
+                    try { 
+                        const stats = fs.statSync(fullPath);
+                        return stats.isDirectory() || stats.isSymbolicLink();
+                    } catch { return false; }
                 });
+                console.log(`[Library] Found ${folders.length} series folders in ${libPath}`);
                 folders.forEach(f => allFolders.push({ libPath, folderName: f }));
             }
 
@@ -125,6 +154,13 @@ class LibraryService {
     async syncSeries(libPath, folderName, forceRefresh = false, searchQuery = null) {
         const seriesPath = path.join(libPath, folderName);
         let series = await this.db.get('SELECT * FROM series WHERE folder_name = ?', folderName);
+        
+        // Path Portability: If found but lib_path is different, update it
+        if (series && series.lib_path !== libPath) {
+            console.log(`[Library] Updating lib_path for ${folderName}: ${series.lib_path} -> ${libPath}`);
+            await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', libPath, series.id);
+            series.lib_path = libPath;
+        }
 
         if (!series) {
             const offlineMatch = await offlineMetadata.findByFolderName(folderName);
@@ -428,11 +464,13 @@ class LibraryService {
                 }
 
                 if (epNum !== null) {
+                    const relPath = path.relative(seriesPath, entryPath).split(path.sep).join('/');
                     const episode = await this.db.get(`SELECT e.id, e.path FROM episodes e JOIN seasons s ON e.season_id = s.id WHERE e.series_id = ? AND s.season_number = ? AND e.episode_number = ?`, seriesId, seasonNum || 1, epNum);
                     if (episode) {
                         if (!episode.path) foundNew = true; // New file for known episode
-                        await this.db.run('UPDATE episodes SET path = NULL, is_downloaded = 0 WHERE path = ?', entryPath);
-                        await this.db.run('UPDATE episodes SET path = ?, is_downloaded = 1 WHERE id = ?', entryPath, episode.id);
+                        await this.db.run('UPDATE episodes SET path = NULL, is_downloaded = 0 WHERE path = ?', entryPath); // Cleanup old absolute paths if they exist
+                        await this.db.run('UPDATE episodes SET path = NULL, is_downloaded = 0 WHERE path = ?', relPath);
+                        await this.db.run('UPDATE episodes SET path = ?, is_downloaded = 1 WHERE id = ?', relPath, episode.id);
                     } else if (seriesId.startsWith('local-') || seriesId.startsWith('al-')) {
                         foundNew = true; // Entirely new episode
                         let season = await this.db.get('SELECT id FROM seasons WHERE series_id = ? AND season_number = ?', seriesId, seasonNum || 1);
@@ -442,7 +480,7 @@ class LibraryService {
                             season = { id: sid };
                         }
                         const eid = `ep-${seriesId}-${seasonNum || 1}-${epNum}`;
-                        await this.db.run(`INSERT OR REPLACE INTO episodes (id, season_id, series_id, title, episode_number, path, is_downloaded) VALUES (?, ?, ?, ?, ?, ?, 1)`, eid, season.id, seriesId, `Episode ${epNum}`, epNum, entryPath);
+                        await this.db.run(`INSERT OR REPLACE INTO episodes (id, season_id, series_id, title, episode_number, path, is_downloaded) VALUES (?, ?, ?, ?, ?, ?, 1)`, eid, season.id, seriesId, `Episode ${epNum}`, epNum, relPath);
                     }
                 }
             }
@@ -474,10 +512,22 @@ class LibraryService {
         // Pass 1: Find best status for each episode number
         for (const ep of episodes) {
             const num = ep.episode_number;
+            let epPath = ep.path;
+            
+            // Resolve relative path if needed
+            if (epPath && !path.isAbsolute(epPath)) {
+                // We need the series record for this episode's series_id
+                const s = await this.db.get('SELECT lib_path, folder_name FROM series WHERE id = ?', ep.series_id || seriesId);
+                if (s && s.lib_path && s.folder_name) {
+                    const normalizedRelPath = epPath.split('/').join(path.sep);
+                    epPath = path.join(s.lib_path, s.folder_name, normalizedRelPath);
+                }
+            }
+
             if (!numberBestStatus[num] || (!numberBestStatus[num].is_downloaded && ep.is_downloaded)) {
                 numberBestStatus[num] = {
                     is_downloaded: !!ep.is_downloaded,
-                    path: ep.path,
+                    path: epPath,
                     episode_number: num
                 };
             }
@@ -504,7 +554,18 @@ class LibraryService {
             }
         }
         const seasons = await this.db.all('SELECT * FROM seasons WHERE series_id = ? ORDER BY season_number', series.id);
-        for (const s of seasons) s.episodes = await this.db.all('SELECT * FROM episodes WHERE season_id = ? ORDER BY episode_number', s.id);
+        for (const s of seasons) {
+            const episodes = await this.db.all('SELECT * FROM episodes WHERE season_id = ? ORDER BY episode_number', s.id);
+            if (series.full_path) {
+                episodes.forEach(ep => {
+                    if (ep.path && !path.isAbsolute(ep.path)) {
+                        const normalizedRelPath = ep.path.split('/').join(path.sep);
+                        ep.path = path.join(series.full_path, normalizedRelPath);
+                    }
+                });
+            }
+            s.episodes = episodes;
+        }
         series.seasons = seasons;
         return series;
     }
@@ -528,12 +589,21 @@ class LibraryService {
         );
 
         for (const ep of matchedEpisodes) {
-            if (ep.path && fs.existsSync(ep.path)) {
+            let epPath = ep.path;
+            if (epPath && !path.isAbsolute(epPath)) {
+                const s = await this.db.get('SELECT lib_path, folder_name FROM series WHERE id = ?', record.series_id);
+                if (s && s.lib_path && s.folder_name) {
+                    const normalizedRelPath = epPath.split('/').join(path.sep);
+                    epPath = path.join(s.lib_path, s.folder_name, normalizedRelPath);
+                }
+            }
+
+            if (epPath && fs.existsSync(epPath)) {
                 try {
-                    fs.unlinkSync(ep.path);
-                    console.log(`[Library] Deleted file: ${ep.path}`);
+                    fs.unlinkSync(epPath);
+                    console.log(`[Library] Deleted file: ${epPath}`);
                 } catch (e) {
-                    console.error(`[Library] Failed to delete file ${ep.path}:`, e.message);
+                    console.error(`[Library] Failed to delete file ${epPath}:`, e.message);
                 }
             }
             await this.db.run('UPDATE episodes SET path = NULL, is_downloaded = 0 WHERE id = ?', ep.id);
@@ -619,6 +689,27 @@ class LibraryService {
         };
         try { scanDir(seriesPath); } catch { }
         return maxEp;
+    }
+
+    async getOrphanedPaths() {
+        const rows = await this.db.all('SELECT DISTINCT lib_path FROM series WHERE lib_path IS NOT NULL AND lib_path != ""');
+        const orphaned = [];
+        for (const row of rows) {
+            if (!fs.existsSync(row.lib_path)) {
+                orphaned.push(row.lib_path);
+            }
+        }
+        return orphaned;
+    }
+    
+    async rebindLibraryPaths(mapping) {
+        // mapping is { "old_path": "new_path" }
+        for (const [oldPath, newPath] of Object.entries(mapping)) {
+            console.log(`[Library] Re-binding ${oldPath} to ${newPath}`);
+            const resolvedNewPath = path.resolve(newPath);
+            await this.db.run('UPDATE series SET lib_path = ? WHERE lib_path = ?', resolvedNewPath, oldPath);
+        }
+        return true;
     }
 }
 

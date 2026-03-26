@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Shield, Info, LogOut, FileVideo, Settings as SettingsIcon, Save, Check, ChevronDown, X, ChevronUp, Library, Database, Cpu, Monitor, Download } from 'lucide-react';
+import { User, Shield, Info, LogOut, FileVideo, Settings as SettingsIcon, Save, Check, ChevronDown, X, ChevronUp, Library, Database, Cpu, Monitor, Download, Plus, Folder } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 import { useTranslation } from 'react-i18next';
+import FolderPicker from '../components/FolderPicker';
+import axios from 'axios';
 
 // Simple cn helper since lib/utils doesn't exist
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -521,7 +523,7 @@ const MuxingSection = ({ config, updateConfig }: any) => {
 );
 };
 
-const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig, metadataLanguage, setMetadataLanguage }: any) => {
+const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig, metadataLanguage, setMetadataLanguage, libraryRoots, setLibraryRoots, setIsPickerOpen, setActivePickerIndex }: any) => {
   const { t } = useTranslation();
   return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
@@ -649,6 +651,59 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
                 <div className="w-14 h-7 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-white after:border after:rounded-full after:h-[20px] after:w-[20px] after:transition-all peer-checked:bg-orange-500"></div>
             </label>
         </div>
+
+        <div className="pt-8 border-t border-white/5 space-y-6">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shadow-lg">
+                    <Library size={24} />
+                </div>
+                <div>
+                    <div className="text-lg font-bold text-white">{t('sidebar.library')}</div>
+                    <div className="text-sm text-gray-400">{t('setup.library_desc_long')}</div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {libraryRoots.map((root: string, index: number) => (
+                    <div key={index} className="flex gap-2 animate-in slide-in-from-left-2 transition-all">
+                        <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-2xl px-4 py-3 group focus-within:border-primary/50 transition-all">
+                            <Folder size={18} className="text-gray-500 mr-3" />
+                            <input 
+                                type="text"
+                                value={root}
+                                onChange={(e) => {
+                                    const newRoots = [...libraryRoots];
+                                    newRoots[index] = e.target.value;
+                                    setLibraryRoots(newRoots);
+                                }}
+                                className="bg-transparent border-none focus:outline-none text-white text-sm flex-1"
+                            />
+                            <button 
+                                onClick={() => {
+                                    setActivePickerIndex(index);
+                                    setIsPickerOpen(true);
+                                }}
+                                className="p-2 hover:bg-white/10 text-primary rounded-lg transition-colors border-l border-white/10 ml-2"
+                            >
+                                <Folder size={14} />
+                            </button>
+                        </div>
+                        <button 
+                            onClick={() => setLibraryRoots(libraryRoots.filter((_: any, i: number) => i !== index))}
+                            className="p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                ))}
+                <button 
+                    onClick={() => setLibraryRoots([...libraryRoots, ''])}
+                    className="w-full border-2 border-dashed border-white/5 hover:border-primary/50 hover:bg-primary/5 text-gray-500 hover:text-primary py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4 font-bold uppercase tracking-widest text-xs"
+                >
+                    <Plus size={16} /> {t('setup.add_folder')}
+                </button>
+            </div>
+        </div>
       </div>
     </div>
   </div>
@@ -737,23 +792,28 @@ const Settings = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [credentials, setCredentials] = useState({ username: '', password: '', token: '' });
   const [loggingIn, setLoggingIn] = useState(false);
+  const [libraryRoots, setLibraryRoots] = useState<string[]>([]);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [activePickerIndex, setActivePickerIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
         const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
         try {
-            const [cfg, auth, sys, ver, meta] = await Promise.all([
+            const [cfg, auth, sys, ver, meta, roots] = await Promise.all([
                 fetch('/api/config/muxing', { headers }).then(r => r.json()),
                 fetch('/api/auth/status', { headers }).then(r => r.json()),
                 fetch('/api/system/info', { headers }).then(r => r.json()),
                 fetch('/api/version').then(r => r.json()),
-                fetch('/api/config/metadata-language', { headers }).then(r => r.json())
+                fetch('/api/config/metadata-language', { headers }).then(r => r.json()),
+                fetch('/api/settings/library-roots', { headers }).then(r => r.json())
             ]);
             setConfig(cfg);
             setAuthStatus(auth);
             setSystemInfo(sys);
             setVersions(ver);
             setMetadataLanguage(meta.language);
+            setLibraryRoots(roots || []);
         } catch (err) {
             console.error('Error fetching settings data:', err);
         }
@@ -803,6 +863,11 @@ const Settings = () => {
           method: 'POST',
           headers,
           body: JSON.stringify({ language: metadataLanguage })
+        }),
+        fetch('/api/settings/library-roots', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ roots: libraryRoots })
         })
       ]);
 
@@ -921,6 +986,10 @@ const Settings = () => {
                 updateConfig={updateConfig}
                 metadataLanguage={metadataLanguage}
                 setMetadataLanguage={setMetadataLanguage}
+                libraryRoots={libraryRoots}
+                setLibraryRoots={setLibraryRoots}
+                setIsPickerOpen={setIsPickerOpen}
+                setActivePickerIndex={setActivePickerIndex}
             />
         )}
 
@@ -938,6 +1007,20 @@ const Settings = () => {
               {t('settings.saved')}
           </div>
       )}
+
+      <FolderPicker 
+        isOpen={isPickerOpen}
+        initialPath={activePickerIndex !== null ? libraryRoots[activePickerIndex] : 'root'}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={(path) => {
+            if (activePickerIndex !== null) {
+                const newRoots = [...libraryRoots];
+                newRoots[activePickerIndex] = path;
+                setLibraryRoots(newRoots);
+            }
+            setIsPickerOpen(false);
+        }}
+      />
     </div>
   );
 };

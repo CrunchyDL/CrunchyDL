@@ -409,6 +409,9 @@
     "finish": "Finish Setup",
     "error_passwords": "Passwords do not match",
     "error_password_length": "Password must be at least 4 characters",
-    "error_install": "Installation failed"
+    "error_install": "Installation failed",
+    "library_desc_long": "Define folder paths where your anime library will be stored.",
+    "add_folder": "Add Folder",
+    "path_placeholder": "E:\\Anime"
   }
 }

@@ -71,6 +71,9 @@ class SetupService {
             if (config.crPassword) {
                 await db.run('INSERT INTO settings (`key`, value) VALUES (?, ?)', 'crunchyroll_password', config.crPassword);
             }
+            if (config.libraryRoots && Array.isArray(config.libraryRoots)) {
+                await db.run('INSERT INTO settings (`key`, value) VALUES (?, ?)', 'library_roots', JSON.stringify(config.libraryRoots));
+            }
 
             // 4. Save Config
             fs.writeFileSync(this.configPath, JSON.stringify({ ...dbConfig, installed: true }, null, 2), 'utf8');
@@ -83,11 +86,15 @@ class SetupService {
     }
 
     async getStatus() {
+        const systemService = require('./system');
+        const recommendedRoots = await systemService.detectPotentialLibraryRoots();
         return {
             installed: await this.isInstalled(),
             env: {
                 sqlite_default: './data/database.sqlite',
-                mysql_available: true
+                mysql_available: true,
+                is_windows: process.platform === 'win32',
+                recommended_roots: recommendedRoots
             }
         };
     }

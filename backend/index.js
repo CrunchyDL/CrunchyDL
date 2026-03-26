@@ -46,6 +46,7 @@ app.use(morgan('dev'));
 // Setup Middleware: Only allow /api/setup if not installed
 app.use(async (req, res, next) => {
     if (req.path.startsWith('/api/setup')) return next();
+    if (req.path.startsWith('/api/system/browse')) return next();
     if (req.path.startsWith('/health')) return next();
     
     const isInstalled = await setupService.isInstalled();
@@ -93,6 +94,7 @@ const authenticate = (req, res, next) => {
         req.path === '/setup/install' ||
         req.path === '/stock-avatars' ||
         req.path === '/config/presets' ||
+        req.path === '/system/browse' ||
         req.path.includes('/poster')) {
         return next();
     }
@@ -594,6 +596,62 @@ app.post('/api/library/series/:id/rebind', async (req, res) => {
     } catch (err) {
         console.error('Rebind error:', err);
         res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
+
+app.get('/api/library/orphaned', async (req, res) => {
+    try {
+        const paths = await libServiceInstance.getOrphanedPaths();
+        res.json(paths);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/library/bulk-rebind', async (req, res) => {
+    try {
+        const { mapping } = req.body;
+        if (!mapping) return res.status(400).json({ error: 'Mapping required' });
+        await libServiceInstance.rebindLibraryPaths(mapping);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/settings/library-roots', async (req, res) => {
+    try {
+        const db = await setupDb();
+        const setting = await db.get('SELECT value FROM settings WHERE `key` = ?', 'library_roots');
+        const roots = setting && setting.value ? JSON.parse(setting.value) : [];
+        res.json(roots);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/settings/library-roots', async (req, res) => {
+    try {
+        const { roots } = req.body;
+        if (!Array.isArray(roots)) return res.status(400).json({ error: 'Array of roots required' });
+        const db = await setupDb();
+        await db.run('INSERT INTO settings (`key`, value) VALUES (?, ?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', 'library_roots', JSON.stringify(roots));
+        if (typeof libServiceInstance !== 'undefined' && libServiceInstance) {
+            await libServiceInstance.updateLibraryPaths();
+        }
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/system/browse', async (req, res) => {
+    try {
+        const { path } = req.query;
+        const result = await systemService.listDirectories(path);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -1566,6 +1624,7 @@ async function start() {
 
         cliServiceInstance = new CliService(db, io);
         libServiceInstance = new libraryService(db, cliServiceInstance);
+        await libServiceInstance.updateLibraryPaths();
         cliServiceInstance.setLibraryService(libServiceInstance);
         configService = new ConfigService();
 

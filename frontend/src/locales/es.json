@@ -409,6 +409,9 @@
     "finish": "Finalizar Configuración",
     "error_passwords": "Las contraseñas no coinciden",
     "error_password_length": "La contraseña debe tener al menos 4 caracteres",
-    "error_install": "La instalación falló"
+    "error_install": "La instalación falló",
+    "library_desc_long": "Define las rutas de las carpetas donde se almacenará tu biblioteca de anime.",
+    "add_folder": "Añadir Carpeta",
+    "path_placeholder": "E:\\Anime"
   }
 }

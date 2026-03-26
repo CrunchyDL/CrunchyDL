@@ -22,7 +22,8 @@ interface AuthContextType {
   isAdmin: boolean;
   isContributor: boolean;
   mustChangePassword: boolean;
-  needsSetup: boolean; // New
+  needsSetup: boolean;
+  setupStatus: any;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +32,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
-  const [needsSetup, setNeedsSetup] = useState(false); // New
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupStatus, setSetupStatus] = useState<any>(null);
 
   const API_BASE = '/api';
 
@@ -40,6 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // 1. Check if setup is needed
         const setupResp = await axios.get(`${API_BASE}/setup/status`);
+        setSetupStatus(setupResp.data);
         if (setupResp.data && setupResp.data.installed === false) {
           setNeedsSetup(true);
           setIsLoading(false);
@@ -114,7 +117,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const mustChangePassword = !!user?.must_change_password;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, changePassword, updateUser, isLoading, isAdmin, isContributor, mustChangePassword, needsSetup }}>
+    <AuthContext.Provider value={{ user, token, login, logout, changePassword, updateUser, isLoading, isAdmin, isContributor, mustChangePassword, needsSetup, setupStatus }}>
       {children}
     </AuthContext.Provider>
   );
