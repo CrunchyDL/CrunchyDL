@@ -48,7 +48,7 @@ app.use(async (req, res, next) => {
     if (req.path.startsWith('/api/setup')) return next();
     if (req.path.startsWith('/api/system/browse')) return next();
     if (req.path.startsWith('/health')) return next();
-    
+
     const isInstalled = await setupService.isInstalled();
     if (!isInstalled && req.path.startsWith('/api')) {
         return res.status(418).json({ needsSetup: true });
@@ -414,6 +414,12 @@ app.post('/api/search', authenticate, async (req, res) => {
             results = await catalogService.searchSeries(query);
         } else if (service === 'anilist') {
             results = await anilistService.searchSeries(query);
+        } else if (service === 'tmdb') {
+            const db = await setupDb();
+            results = await tmdbService.searchSeries(query, db);
+        } else if (service === 'tvdb') {
+            const db = await setupDb();
+            results = await tvdbService.searchSeries(query, db);
         } else {
             results = await catalogService.searchSeries(query);
         }
@@ -748,6 +754,18 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
             }
         }
 
+        // 3. Fallback for AniList IDs (for suggestions/browsing)
+        if (seriesId.startsWith('al-')) {
+            try {
+                const details = await anilistService.getSeriesDetails(seriesId);
+                if (details && details.image) {
+                    return res.redirect(details.image);
+                }
+            } catch (e) {
+                // Ignore and fall through to 404
+            }
+        }
+
         res.status(404).send('Poster not found');
     } catch (err) {
         console.error('[Poster] Error serving image:', err.message);
@@ -897,9 +915,9 @@ app.post('/api/downloads/clear-finished', authenticate, hasPermission('sys:manag
 
 // Versioning
 app.get('/api/version', (req, res) => {
-    res.json({ 
-        version: appVersion, 
-        coreVersion: coreVersion 
+    res.json({
+        version: appVersion,
+        coreVersion: coreVersion
     });
 });
 
@@ -1257,9 +1275,16 @@ app.delete('/api/subscriptions/:id', authenticate, async (req, res) => {
 app.get('/api/config/muxing', authenticate, async (req, res) => {
     try {
         const config = await configService.getMuxingConfig();
-        res.json(config);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        const db = await setupDb();
+        const tmdbKey = await tmdbService.getApiKey(db);
+        const tvdbKey = await tvdbService.getApiKey(db);
+        res.json({ 
+            ...config, 
+            tmdbApiKey: tmdbKey,
+            tvdbApiKey: tvdbKey
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch config' });
     }
 });
 
@@ -1574,23 +1599,23 @@ app.post('/api/setup/install', async (req, res) => {
     try {
         const isInstalled = await setupService.isInstalled();
         if (isInstalled) return res.status(400).json({ error: 'Already installed' });
-        
+
         const result = await setupService.install(req.body);
-        
+
         // After install, we need to re-initialize services
         console.log('[Setup] Installation successful. Rebooting services...');
-        await start(); 
+        await start();
 
         // Generate token for automatic login
         const db = await setupDb();
         const user = await db.get('SELECT id, username, role FROM users WHERE username = ?', req.body.admin.username);
-        
+
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role, must_change_password: false },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
-        
+
         res.json({
             ...result,
             token,
@@ -1635,7 +1660,7 @@ async function start() {
         if (!server.listening) {
             server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
         }
-        
+
         libServiceInstance.scan();
         libServiceInstance.startAutoRefresh();
     } catch (err) {

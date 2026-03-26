@@ -197,8 +197,8 @@ class LibraryService {
             const { results, errors } = await metadataHub.search(queryName, {
                 providers, 
                 minConfidence: muxConfig.minMetadataConfidence || 0.7,
-                apiKeyTMDB: muxConfig.tmdbApiKey, 
-                apiKeyTVDB: muxConfig.tvdbApiKey,
+                apiKeyTMDB: muxConfig.tmdbApiKey || this.db, 
+                apiKeyTVDB: muxConfig.tvdbApiKey || this.db,
                 language: metadataLang?.value || 'en-US'
             });
 
@@ -632,7 +632,12 @@ class LibraryService {
 
     async searchMetadataMatches(query) {
         const config = await this.configService.getMuxingConfig();
-        const results = await metadataHub.search(query, { providers: ['crunchy', 'anilist', 'tmdb', 'tvdb'], minConfidence: 0, apiKeyTMDB: config.tmdbApiKey, apiKeyTVDB: config.tvdbApiKey });
+        const { results } = await metadataHub.search(query, { 
+            providers: ['crunchy', 'anilist', 'tmdb', 'tvdb'], 
+            minConfidence: 0, 
+            apiKeyTMDB: config.tmdbApiKey || this.db, 
+            apiKeyTVDB: config.tvdbApiKey || this.db 
+        });
         if (results.crunchy) { results.crunchyroll = results.crunchy; delete results.crunchy; }
         return results;
     }

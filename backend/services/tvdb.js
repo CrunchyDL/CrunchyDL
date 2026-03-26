@@ -21,7 +21,7 @@ class TvdbService {
 
     async login(dbOrKey) {
         let apiKey = typeof dbOrKey === 'string' ? dbOrKey : await this.getApiKey(dbOrKey);
-        if (!apiKey) throw new Error('TVDB API Key is required');
+        if (!apiKey) return null;
         
         try {
             const response = await axios.post(`${this.baseUrl}/login`, {
