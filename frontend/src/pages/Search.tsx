@@ -144,7 +144,8 @@ const Search = () => {
         season_id: seasonId,
         season_number: seasonNumber,
         episodes: episodesValue,
-        rootPath: selectedVolume
+        rootPath: selectedVolume,
+        image: anime.image
       });
       alert(t('common.download_added_to_queue'));
     } catch (error) {

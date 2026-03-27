@@ -320,6 +320,7 @@ app.post('/api/admin/users', authenticate, hasPermission('sys:manage-users'), as
 app.put('/api/admin/users/:id', authenticate, hasPermission('sys:manage-users'), async (req, res) => {
     const { role, must_change_password } = req.body;
     try {
+        const db = await setupDb();
         const targetUser = await db.get('SELECT username FROM users WHERE id = ?', req.params.id);
         await db.run(
             'UPDATE users SET role = ?, must_change_password = ? WHERE id = ?',
@@ -598,6 +599,15 @@ app.get('/api/library/series/:id/status', async (req, res) => {
     }
 });
 
+app.delete('/api/library/series/:id', async (req, res) => {
+    try {
+        await libServiceInstance.deleteSeries(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/library/series/:id/rebind', async (req, res) => {
     try {
         console.log(`Rebind requested for ${req.params.id} to content:`, JSON.stringify(req.body));
@@ -773,6 +783,26 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
             } catch (e) { }
         }
 
+        // 4. Fallback for local folders (look for poster.jpg, folder.jpg in the directory)
+        if (series && (series.id.startsWith('local-') || !series.image)) {
+            try {
+                const details = await libServiceInstance.getSeriesFullDetails(seriesId);
+                if (details && details.full_path) {
+                    const localPossible = ['poster.jpg', 'poster.png', 'folder.jpg', 'folder.png', 'cover.jpg', 'cover.png'];
+                    for (const fileName of localPossible) {
+                        const localPath = path.join(details.full_path, fileName);
+                        if (fs.existsSync(localPath)) return res.sendFile(path.resolve(localPath));
+                    }
+                }
+            } catch (e) { }
+        }
+
+        // 5. Final fallback - Placeholder
+        const fallbackPath = path.resolve(__dirname, 'multi-downloader-nx', 'gui', 'react', 'public', 'notFound.png');
+        if (fs.existsSync(fallbackPath)) {
+            return res.sendFile(fallbackPath);
+        }
+
         res.status(404).send('Poster not found');
     } catch (err) {
         console.error('[Poster] Error serving image:', err.message);
@@ -842,17 +872,19 @@ app.get('/api/downloads', authenticate, async (req, res) => {
     try {
         const db = await setupDb();
         const items = await db.all(`
-            SELECT * FROM downloads 
+            SELECT d.*, COALESCE(s.image, d.thumbnail) as thumbnail 
+            FROM downloads d
+            LEFT JOIN series s ON d.show_id = s.id
             ORDER BY 
                 CASE 
-                    WHEN status = 'downloading' THEN 0 
-                    WHEN status = 'encoding' THEN 1 
-                    WHEN status = 'queued' THEN 2 
-                    WHEN status = 'pending' THEN 3
+                    WHEN d.status = 'downloading' THEN 0 
+                    WHEN d.status = 'encoding' THEN 1 
+                    WHEN d.status = 'queued' THEN 2 
+                    WHEN d.status = 'pending' THEN 3
                     ELSE 4 
                 END, 
-                name ASC, 
-                id ASC
+                d.name ASC, 
+                d.id ASC
         `);
         const stats = await db.get('SELECT AVG(encoding_time) as avgTime FROM downloads WHERE encoding_time IS NOT NULL');
         res.json({
@@ -865,7 +897,7 @@ app.get('/api/downloads', authenticate, async (req, res) => {
 });
 
 app.post('/api/downloads', authenticate, hasPermission('content:download'), async (req, res) => {
-    const { name, service, show_id, season_id, season_number, episodes = 'all', rootPath } = req.body;
+    const { name, service, show_id, season_id, season_number, episodes = 'all', rootPath, image } = req.body;
 
     let episodeList = (episodes !== 'all' && typeof episodes === 'string' && episodes.includes(','))
         ? episodes.split(',').map(e => e.trim())
@@ -894,7 +926,8 @@ app.post('/api/downloads', authenticate, hasPermission('content:download'), asyn
             season_id,
             episodes: ep,
             rootPath,
-            triggeredBy: req.user.username
+            triggeredBy: req.user.username,
+            image
         });
         ids.push(taskId);
     }
@@ -1082,7 +1115,8 @@ app.put('/api/suggestions/:id', authenticate, hasPermission('mod:approve-suggest
                 service: 'crunchy',
                 show_id: suggestion.series_id,
                 episodes: 'all',
-                triggeredBy: suggestion.username // User who suggested it
+                triggeredBy: suggestion.username, // User who suggested it
+                image: suggestion.image
             });
         }
         addAuditLog(req, status === 'approved' ? 'SUGGESTION_APPROVE' : 'SUGGESTION_REJECT', suggestion.title);
@@ -1101,8 +1135,40 @@ app.post('/api/config/muxing', authenticate, hasPermission('sys:manage-users'), 
     }
 });
 
-app.get('/api/config/presets', (req, res) => {
-    res.json(encodingPresets);
+app.get('/api/config/presets', async (req, res) => {
+    try {
+        const db = await setupDb();
+        const presets = await db.all('SELECT * FROM presets ORDER BY `group` ASC, name ASC');
+        res.json(presets);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/config/presets', authenticate, hasPermission('sys:manage-users'), async (req, res) => {
+    const { id, name, codec, resolution, fps, crf, group } = req.body;
+    try {
+        const db = await setupDb();
+        // MySQL ON DUPLICATE KEY UPDATE / SQLite ON CONFLICT handled by normalizeSchema
+        await db.run(
+            'INSERT INTO presets (id, name, codec, resolution, fps, crf, `group`) VALUES (?, ?, ?, ?, ?, ?, ?) ' +
+            'ON CONFLICT(id) DO UPDATE SET name=excluded.name, codec=excluded.codec, resolution=excluded.resolution, fps=excluded.fps, crf=excluded.crf, `group`=excluded.group',
+            id, name, codec, resolution, fps, crf, group
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/config/presets/:id', authenticate, hasPermission('sys:manage-users'), async (req, res) => {
+    try {
+        const db = await setupDb();
+        await db.run('DELETE FROM presets WHERE id = ?', req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.get('/api/system/storage', authenticate, async (req, res) => {
@@ -1182,6 +1248,211 @@ app.get('/api/user/dashboard', authenticate, async (req, res) => {
     }
 });
 
+// User Profile Endpoints
+app.get('/api/user/profile', authenticate, async (req, res) => {
+    try {
+        const db = await setupDb();
+        let user;
+        try {
+            user = await db.get('SELECT id, username, role, bio, avatar_url, full_name FROM users WHERE id = ?', req.user.id);
+        } catch (e) {
+            console.warn('[Profile] Error fetching extended profile, falling back to basic data:', e.message);
+            user = await db.get('SELECT id, username, role FROM users WHERE id = ?', req.user.id);
+        }
+        res.json(user);
+    } catch (err) {
+        console.error('[Profile] Critical auth error:', err.message);
+        res.status(500).json({ error: 'Auth initialization failed' });
+    }
+});
+
+app.post('/api/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const avatarUrl = `/avatars/${req.file.filename}`;
+
+    try {
+        const db = await setupDb();
+        await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', avatarUrl, req.user.id);
+        addAuditLog(req, 'AVATAR_UPDATE', 'Custom Avatar', { url: avatarUrl });
+        res.json({ url: avatarUrl });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to persist avatar' });
+    }
+});
+
+// Subscription Routes
+app.get('/api/subscriptions', authenticate, async (req, res) => {
+    try {
+        const subs = await subService.getSubscriptions();
+        res.json(subs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/subscriptions', authenticate, async (req, res) => {
+    const { id, title, nextEpisode, day, time, rootPath } = req.body;
+    try {
+        await subService.subscribe(id, title, nextEpisode, day, time, rootPath);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/subscriptions/:id', authenticate, async (req, res) => {
+    try {
+        await subService.unsubscribe(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Configuration & Settings ---
+
+app.get('/api/config/muxing', authenticate, async (req, res) => {
+    try {
+        const config = await configService.getMuxingConfig();
+        const db = await setupDb();
+        const tmdbKey = await tmdbService.getApiKey(db);
+        const tvdbKey = await tvdbService.getApiKey(db);
+        res.json({
+            ...config,
+            tmdbApiKey: tmdbKey,
+            tvdbApiKey: tvdbKey
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to fetch config' });
+    }
+});
+
+app.post('/api/config/muxing', authenticate, async (req, res) => {
+    try {
+        const newConfig = await configService.updateMuxingConfig(req.body);
+        res.json(newConfig);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- System & User Activity ---
+
+app.get('/api/system/info', authenticate, (req, res) => {
+    try {
+        const cpus = os.cpus().length;
+        const totalMem = Math.round(os.totalmem() / (1024 * 1024 * 1024));
+        const freeMem = Math.round(os.freemem() / (1024 * 1024 * 1024));
+        res.json({
+            cpus,
+            totalMem,
+            freeMem,
+            platform: os.platform(),
+            release: os.release(),
+            uptime: os.uptime(),
+            loadavg: os.loadavg()
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/system/storage', authenticate, async (req, res) => {
+    try {
+        const volumes = libServiceInstance.getLibraryPaths();
+        if (!volumes || volumes.length === 0) return res.json([]);
+        const stats = await Promise.all(volumes.map(v => systemService.getDiskSpace(v)));
+        res.json(stats);
+    } catch (err) {
+        console.error('Storage info error:', err);
+        res.status(500).json({ error: 'Failed to fetch storage info' });
+    }
+});
+
+app.get('/api/system/logs', authenticate, hasPermission('sys:view-logs'), async (req, res) => {
+    try {
+        const db = await setupDb();
+        const logs = await db.all('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 200');
+        res.json(logs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/user/dashboard', authenticate, async (req, res) => {
+    try {
+        const db = await setupDb();
+        const userId = req.user.id;
+
+        const stats = await db.get(`
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
+            FROM suggestions 
+            WHERE user_id = ?
+        `, userId);
+
+        const myRecent = await db.all(`
+            SELECT * FROM suggestions 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT 5
+        `, userId);
+
+        const arrivals = await db.all(`
+            SELECT * FROM series 
+            ORDER BY created_at DESC 
+            LIMIT 6
+        `);
+
+        const recentEpisodes = await db.all(`
+            SELECT e.*, s.title as series_title, s.image as series_image
+            FROM episodes e
+            JOIN series s ON e.series_id = s.id
+            WHERE e.downloaded_at IS NOT NULL
+            ORDER BY e.downloaded_at DESC
+            LIMIT 6
+        `);
+
+        res.json({
+            stats: { total: stats.total || 0, approved: stats.approved || 0, pending: stats.pending || 0 },
+            recentSuggestions: myRecent,
+            newArrivals: arrivals,
+            recentEpisodes: recentEpisodes
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/user/profile', authenticate, async (req, res) => {
+    try {
+        const db = await setupDb();
+        let user;
+        try {
+            user = await db.get('SELECT id, username, role, bio, avatar_url, full_name FROM users WHERE id = ?', req.user.id);
+        } catch (e) {
+            user = await db.get('SELECT id, username, role FROM users WHERE id = ?', req.user.id);
+        }
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Auth initialization failed' });
+    }
+});
+
+app.post('/api/user/avatar', authenticate, upload.single('avatar'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const avatarUrl = `/avatars/${req.file.filename}`;
+    try {
+        const db = await setupDb();
+        await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', avatarUrl, req.user.id);
+        addAuditLog(req, 'AVATAR_UPDATE', 'Custom Avatar', { url: avatarUrl });
+        res.json({ url: avatarUrl });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to persist avatar' });
+    }
+});
 
 // Stock Avatars Endpoints
 app.get('/api/stock-avatars', async (req, res) => {
@@ -1401,6 +1672,23 @@ app.post('/api/setup/install', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
+async function seedPresets(db) {
+    try {
+        const count = await db.get('SELECT COUNT(*) as count FROM presets');
+        if (count.count === 0) {
+            console.log('[Presets] Seeding default presets...');
+            for (const p of encodingPresets) {
+                await db.run(
+                    'INSERT INTO presets (id, name, codec, resolution, fps, crf, `group`, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    p.id, p.name, p.codec, p.resolution, p.fps, p.crf, p.group || 'General', p.is_default ? 1 : 0
+                );
+            }
+        }
+    } catch (err) {
+        console.error('[Presets] Seeding failed:', err.message);
+    }
+}
+
 async function start() {
     try {
         const isInstalled = await setupService.isInstalled();
@@ -1414,6 +1702,9 @@ async function start() {
 
         const db = await setupDb();
         console.log('Database connected');
+
+        // Seed default presets
+        await seedPresets(db);
 
         cliServiceInstance = new CliService(db, io);
         libServiceInstance = new libraryService(db, cliServiceInstance);

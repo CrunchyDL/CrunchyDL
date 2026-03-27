@@ -22,7 +22,12 @@
     "fall": "Fall",
     "create": "Create",
     "drives": "Drives",
-    "empty_directory": "This directory is empty"
+    "empty_directory": "This directory is empty",
+    "id": "ID",
+    "group": "Group",
+    "general": "General",
+    "other": "Other",
+    "name": "Name"
   },
   "dashboard": {
     "welcome": "Welcome back",
@@ -98,6 +103,8 @@
     "catalog_title": "Catalog",
     "seasonal_subtitle": "Discover what's airing in {{season}} {{year}}.",
     "browse_subtitle": "Explore the most popular series in the entire library.",
+    "download_season": "Download Season",
+    "download_missing_season": "Download Missing (Season)",
     "search_subtitle": "Results for your global search across the platform.",
     "discovery": "Discovery",
     "search_placeholder": "Search anything in the platform...",
@@ -208,6 +215,9 @@
     "scan_now": "Scan Now",
     "change_poster": "Change Poster",
     "no_local_folder": "No local folder linked",
+    "delete_series_confirm": "Are you sure you want to delete this series from the database? This won't delete the video files or the poster image.",
+    "delete_series_tooltip": "Delete series from database",
+    "error_deleting_series": "Error deleting series from database",
     "download_missing": "Download Missing",
     "repair_metadata": "Repair Metadata",
     "identify": "Identify",
@@ -303,6 +313,8 @@
     "auto": "AUTO",
     "manual": "MANUAL",
     "trigger_subscription": "Subscription",
+    "total_tasks": "Total Tasks",
+    "active_working": "Active Processing",
     "empty": "No items in the download queue."
   },
   "profile": {
@@ -400,7 +412,19 @@
     "meta_lang_tip": "This language will be used to search for titles, descriptions and episode names on Crunchyroll and other providers.",
     "auth_error": "Authentication Error: {{error}}",
     "cpu_threads": "CPU Threads",
-    "total_ram": "Total RAM"
+    "total_ram": "Total RAM",
+    "tab_presets": "Encoding Presets",
+    "encoding_presets": "Encoding Presets",
+    "manage_presets_desc": "Manage and customize your video encoding profiles.",
+    "add_preset": "Add New Preset",
+    "new_preset": "New Encoding Preset",
+    "edit_preset": "Edit Encoding Preset",
+    "codec": "Video Codec",
+    "resolution": "Resolution",
+    "original": "Original",
+    "preset_id_label": "ID (unique)",
+    "preset_id_placeholder": "e.g. h264_1080p_high",
+    "preset_name_placeholder": "e.g. 1080p H.264 High Quality"
   },
   "setup": {
     "welcome": "Welcome!",

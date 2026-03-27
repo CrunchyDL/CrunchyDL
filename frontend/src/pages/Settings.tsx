@@ -293,8 +293,17 @@ const AuthSection = ({ authStatus, showLogin, setShowLogin, credentials, setCred
 );
 };
 
-const MuxingSection = ({ config, updateConfig }: any) => {
+const MuxingSection = ({ config, updateConfig, presets }: any) => {
   const { t } = useTranslation();
+  
+  // Group presets by their group property
+  const groupedPresets = presets.reduce((acc: any, preset: any) => {
+    const group = preset.group || 'Other';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(preset);
+    return acc;
+  }, {});
+
   return (
   <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500">
     <div className="bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 p-8 space-y-8">
@@ -436,8 +445,8 @@ const MuxingSection = ({ config, updateConfig }: any) => {
                 <div className="flex items-center gap-3">
                     <Monitor size={20} className="text-primary" />
                     <div>
-                        <div className="text-sm font-bold">MP4 Container</div>
-                        <div className="text-[10px] text-gray-500">MKV is recommended</div>
+                        <div className="text-sm font-bold">{t('settings.mp4_container')}</div>
+                        <div className="text-[10px] text-gray-500">{t('settings.mkv_recommended')}</div>
                     </div>
                 </div>
                 <input 
@@ -474,27 +483,13 @@ const MuxingSection = ({ config, updateConfig }: any) => {
                   className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
                   <option value="custom">{t('settings.preset_custom')}</option>
-                  <optgroup label={t('settings.preset_av1_high_quality')}>
-                    <option value="av1_1080p24">AV1 1080p24</option>
-                    <option value="av1_720p24">AV1 720p24</option>
-                    <option value="av1_480p24">AV1 480p24</option>
-                    <option value="av1_360p24">AV1 360p24</option>
-                    <option value="av1_240p24">AV1 240p24</option>
-                  </optgroup>
-                  <optgroup label={t('settings.preset_h265_hevc')}>
-                    <option value="h265_1080p24">H.265 1080p24</option>
-                    <option value="h265_720p24">H.265 720p24</option>
-                    <option value="h265_480p24">H.265 480p24</option>
-                    <option value="h265_360p24">H.265 360p24</option>
-                    <option value="h265_240p24">H.265 240p24</option>
-                  </optgroup>
-                  <optgroup label={t('settings.preset_h264_avc')}>
-                    <option value="h264_1080p24">H.264 1080p24</option>
-                    <option value="h264_720p24">H.264 720p24</option>
-                    <option value="h264_480p24">H.264 480p24</option>
-                    <option value="h264_360p24">H.264 360p24</option>
-                    <option value="h264_240p24">H.264 240p24</option>
-                  </optgroup>
+                  {Object.entries(groupedPresets).map(([group, groupPresets]: any) => (
+                    <optgroup key={group} label={t(`common.${group.toLowerCase()}`, { defaultValue: group })}>
+                      {groupPresets.map((preset: any) => (
+                        <option key={preset.id} value={preset.id}>{preset.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </div>
               
@@ -779,9 +774,178 @@ const SystemSection = ({ systemInfo, versions }: any) => {
 );
 };
 
+const PresetManagementSection = ({ presets, onSave, onDelete }: any) => {
+  const { t } = useTranslation();
+  const [editingPreset, setEditingPreset] = useState<any>(null);
+  const [isAdding, setIsAdding] = useState(false);
+
+  const emptyPreset = { id: '', name: '', codec: 'libx264', resolution: '1080p', fps: 'auto', crf: 23, group: 'General' };
+
+  const groups = Array.from(new Set(presets.map((p: any) => p.group || 'General'))).sort() as string[];
+
+  return (
+    <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-500 pb-20">
+      <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-lg">
+                <FileVideo size={24} />
+            </div>
+            <div>
+                <div className="text-lg font-bold text-white uppercase tracking-tight">{t('settings.encoding_presets')}</div>
+                <div className="text-sm text-gray-400">{t('settings.manage_presets_desc')}</div>
+            </div>
+          </div>
+          <button 
+            onClick={() => { setEditingPreset(emptyPreset); setIsAdding(true); }}
+            className="flex items-center gap-2 px-6 py-3 bg-primary/10 text-primary border border-primary/20 rounded-2xl font-bold hover:bg-primary/20 transition-all active:scale-95 shadow-lg shadow-primary/5"
+          >
+            <Plus size={18} />
+            {t('settings.add_preset')}
+          </button>
+      </div>
+
+      {(isAdding || editingPreset) && (
+          <div className="bg-secondary/60 backdrop-blur-xl rounded-3xl border border-primary/20 p-8 space-y-8 shadow-2xl animate-in zoom-in-95 duration-300">
+              <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-black text-white">{isAdding ? t('settings.new_preset') : t('settings.edit_preset')}</h3>
+                  <button onClick={() => { setEditingPreset(null); setIsAdding(false); }} className="p-2 hover:bg-white/5 rounded-full text-gray-400"><X size={20} /></button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('settings.preset_id_label')}</label>
+                      <input 
+                        value={editingPreset.id} 
+                        onChange={e => setEditingPreset({...editingPreset, id: e.target.value})}
+                        disabled={!isAdding}
+                        placeholder={t('settings.preset_id_placeholder')}
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary transition-all disabled:opacity-50"
+                      />
+                  </div>
+                  <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('common.name')}</label>
+                      <input 
+                        value={editingPreset.name} 
+                        onChange={e => setEditingPreset({...editingPreset, name: e.target.value})}
+                        placeholder={t('settings.preset_name_placeholder')}
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                      />
+                  </div>
+                  <div className="space-y-3">
+                      <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('settings.codec')}</label>
+                      <select 
+                        value={editingPreset.codec} 
+                        onChange={e => setEditingPreset({...editingPreset, codec: e.target.value})}
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm text-white focus:outline-none focus:border-primary appearance-none transition-all"
+                      >
+                          <option value="libx264">H.264 (libx264)</option>
+                          <option value="libx265">H.265 (libx265)</option>
+                          <option value="libsvtav1">AV1 (SVT-AV1)</option>
+                      </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-3 col-span-1">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('settings.resolution')}</label>
+                          <select 
+                            value={editingPreset.resolution} 
+                            onChange={e => setEditingPreset({...editingPreset, resolution: e.target.value})}
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary appearance-none"
+                          >
+                              <option value="1080p">1080p</option>
+                              <option value="720p">720p</option>
+                              <option value="480p">480p</option>
+                              <option value="original">{t('settings.original')}</option>
+                          </select>
+                      </div>
+                      <div className="space-y-3 col-span-1">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">CRF</label>
+                          <input 
+                            type="number"
+                            value={editingPreset.crf} 
+                            onChange={e => setEditingPreset({...editingPreset, crf: parseInt(e.target.value)})}
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
+                          />
+                      </div>
+                      <div className="space-y-3 col-span-1">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('common.group')}</label>
+                          <input 
+                            value={editingPreset.group} 
+                            onChange={e => setEditingPreset({...editingPreset, group: e.target.value})}
+                            list="preset-groups"
+                            placeholder={t('common.general')}
+                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
+                          />
+                          <datalist id="preset-groups">
+                              {groups.map(g => (
+                                  <option key={g} value={g} />
+                              ))}
+                          </datalist>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                  <button 
+                    onClick={() => { setEditingPreset(null); setIsAdding(false); }}
+                    className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-white/5 transition-all"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button 
+                    onClick={() => { onSave(editingPreset); setEditingPreset(null); setIsAdding(false); }}
+                    className="px-8 py-3 bg-primary text-secondary rounded-2xl font-black hover:scale-[1.03] transition-all shadow-lg shadow-primary/20"
+                  >
+                    {t('common.save')}
+                  </button>
+              </div>
+          </div>
+      )}
+
+      {groups.map((group: string) => (
+          <div key={group} className="space-y-4">
+              <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] border-l-2 border-primary pl-3 ml-2">{t(`common.${group.toLowerCase()}`, { defaultValue: group })}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {presets.filter((p: any) => (p.group || 'General') === group).map((preset: any) => (
+                      <div key={preset.id} className="group relative p-6 bg-secondary/40 backdrop-blur-md rounded-3xl border border-white/5 hover:border-primary/30 transition-all">
+                          <div className="flex items-start justify-between">
+                              <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-white">{preset.name}</span>
+                                    {preset.is_default ? (
+                                        <span className="text-[8px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black uppercase tracking-widest">{t('settings.preset_default')}</span>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-gray-500 uppercase tracking-tighter">
+                                      {preset.codec} • {preset.resolution} • CRF {preset.crf} • {preset.fps} FPS
+                                  </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={() => setEditingPreset(preset)}
+                                    className="p-2 hover:bg-primary/20 rounded-xl text-primary transition-all"
+                                  >
+                                    <Plus className="rotate-45" size={16} /> 
+                                  </button>
+                                  <button 
+                                    onClick={() => onDelete(preset.id)}
+                                    className="p-2 hover:bg-red-500/20 rounded-xl text-red-500 transition-all"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      ))}
+    </div>
+  );
+};
+
 const Settings = () => {
   const { t, i18n } = useTranslation();
-  const [currentTab, setCurrentTab] = useState<'account' | 'downloads' | 'library' | 'system'>('account');
+  const [currentTab, setCurrentTab] = useState<'account' | 'downloads' | 'presets' | 'library' | 'system'>('account');
   const [config, setConfig] = useState<any>(null);
   const [metadataLanguage, setMetadataLanguage] = useState('en-US');
   const [saving, setSaving] = useState(false);
@@ -796,17 +960,20 @@ const Settings = () => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [activePickerIndex, setActivePickerIndex] = useState<number | null>(null);
 
+  const [presets, setPresets] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
         const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
         try {
-            const [cfg, auth, sys, ver, meta, roots] = await Promise.all([
+            const [cfg, auth, sys, ver, meta, roots, presetData] = await Promise.all([
                 fetch('/api/config/muxing', { headers }).then(r => r.json()),
                 fetch('/api/auth/status', { headers }).then(r => r.json()),
                 fetch('/api/system/info', { headers }).then(r => r.json()),
                 fetch('/api/version').then(r => r.json()),
                 fetch('/api/config/metadata-language', { headers }).then(r => r.json()),
-                fetch('/api/settings/library-roots', { headers }).then(r => r.json())
+                fetch('/api/settings/library-roots', { headers }).then(r => r.json()),
+                fetch('/api/config/presets', { headers }).then(r => r.json())
             ]);
             setConfig(cfg);
             setAuthStatus(auth);
@@ -814,6 +981,7 @@ const Settings = () => {
             setVersions(ver);
             setMetadataLanguage(meta.language);
             setLibraryRoots(roots || []);
+            setPresets(presetData || []);
         } catch (err) {
             console.error('Error fetching settings data:', err);
         }
@@ -906,9 +1074,43 @@ const Settings = () => {
   const tabs = [
     { id: 'account', label: t('library.crunchyroll'), icon: User },
     { id: 'downloads', label: t('sidebar.downloads'), icon: Download },
+    { id: 'presets', label: t('settings.tab_presets'), icon: FileVideo },
     { id: 'library', label: t('sidebar.library'), icon: Library },
     { id: 'system', label: t('settings.tab_system'), icon: Cpu },
   ];
+
+  const handleSavePreset = async (preset: any) => {
+    try {
+        const headers = { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        };
+        const res = await fetch('/api/config/presets', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(preset)
+        });
+        if (res.ok) {
+            const updated = await fetch('/api/config/presets', { headers }).then(r => r.json());
+            setPresets(updated);
+        }
+    } catch (err) {
+        console.error('Error saving preset:', err);
+    }
+  };
+
+  const handleDeletePreset = async (id: string) => {
+    if (!confirm(t('common.confirm_delete'))) return;
+    try {
+        const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+        const res = await fetch(`/api/config/presets/${id}`, { method: 'DELETE', headers });
+        if (res.ok) {
+            setPresets(presets.filter(p => p.id !== id));
+        }
+    } catch (err) {
+        console.error('Error deleting preset:', err);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto pb-24 font-sans animate-in fade-in duration-700">
@@ -975,6 +1177,15 @@ const Settings = () => {
             <MuxingSection 
                 config={config}
                 updateConfig={updateConfig}
+                presets={presets}
+            />
+        )}
+
+        {currentTab === 'presets' && (
+            <PresetManagementSection 
+                presets={presets}
+                onSave={handleSavePreset}
+                onDelete={handleDeletePreset}
             />
         )}
 

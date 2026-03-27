@@ -342,7 +342,8 @@ const Catalog: React.FC = () => {
           service: 'crunchy',
           show_id: anime.id,
           episodes,
-          rootPath: selectedVolume
+          rootPath: selectedVolume,
+          image: anime.image
         })
       });
       if (response.ok) {
@@ -376,9 +377,31 @@ const Catalog: React.FC = () => {
       return;
     }
 
-    // Sort and join to create a range string like "1,2,5-10" if possible, but simple comma separated also works
-    const epRange = missingEpisodes.sort((a, b) => a - b).join(',');
-    startDownload(anime, epRange);
+    startDownload(anime, missingEpisodes.sort((a, b) => a - b).join(','));
+  };
+
+  const downloadSeason = async (anime: Anime, season: any, missingOnly: boolean = false) => {
+    if (!season.episodes || season.episodes.length === 0) return;
+
+    let episodesToDownload: number[] = [];
+    if (missingOnly) {
+      episodesToDownload = season.episodes
+        .filter((ep: any) => {
+          const status = episodesStatus[ep.id] || episodesStatus[`number-${ep.episode_number}`];
+          return !status || !status.is_downloaded;
+        })
+        .map((ep: any) => ep.episode_number);
+    } else {
+      episodesToDownload = season.episodes.map((ep: any) => ep.episode_number);
+    }
+
+    if (episodesToDownload.length === 0) {
+      alert(t('catalog.all_in_library'));
+      return;
+    }
+
+    // Call startDownload with specific episodes
+    startDownload(anime, episodesToDownload.sort((a, b) => a - b).join(','));
   };
 
   const filteredAnime = useMemo(() => {
@@ -711,14 +734,34 @@ const Catalog: React.FC = () => {
                       </div>
 
                       <div className="space-y-10">
-                        {selectedAnime.seasons.map((s: any) => (
+                         {selectedAnime.seasons.map((s: any) => (
                           <div key={s.id} className="group/season">
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className="h-px flex-1 bg-gradient-to-r from-orange-500/50 to-transparent"></div>
-                              <h4 className="text-sm font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                                {s.title || t('catalog.season_number', { number: s.season_number })}
-                              </h4>
-                              <div className="h-px flex-1 bg-gradient-to-l from-orange-500/50 to-transparent"></div>
+                            <div className="flex items-center gap-6 mb-6">
+                              <div className="h-px flex-1 bg-gradient-to-r from-orange-500/50 via-orange-500/20 to-transparent"></div>
+                              <div className="flex flex-col items-center gap-2">
+                                <h4 className="text-base font-black text-white uppercase tracking-[0.4em] flex items-center gap-3">
+                                  {s.title || t('catalog.season_number', { number: s.season_number })}
+                                </h4>
+                                {isContributor && (
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={() => downloadSeason(selectedAnime, s, false)}
+                                      className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white transition-all active:scale-95"
+                                      title={t('catalog.download_season')}
+                                    >
+                                      <Download size={10} /> {t('catalog.download_season')}
+                                    </button>
+                                    <button 
+                                      onClick={() => downloadSeason(selectedAnime, s, true)}
+                                      className="flex items-center gap-1.5 px-3 py-1 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-orange-500 transition-all active:scale-95"
+                                      title={t('catalog.download_missing_season')}
+                                    >
+                                      <Play size={10} /> {t('catalog.download_missing_season')}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="h-px flex-1 bg-gradient-to-l from-orange-500/50 via-orange-500/20 to-transparent"></div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

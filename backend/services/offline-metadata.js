@@ -27,13 +27,19 @@ class OfflineMetadataService {
         if (!fs.existsSync(this.metadataDir)) return null;
         try {
             const files = fs.readdirSync(this.metadataDir);
+            let bestMatch = null;
             for (const file of files) {
                 if (!file.endsWith('.json')) continue;
                 const filePath = path.join(this.metadataDir, file);
                 const content = fs.readFileSync(filePath, 'utf8');
                 const meta = JSON.parse(content);
-                if (meta.folder_name === folderName) return meta;
+                if (meta.folder_name === folderName) {
+                    // Prioritize real IDs over local- stubs
+                    if (!meta.id.startsWith('local-')) return meta;
+                    bestMatch = meta;
+                }
             }
+            return bestMatch;
         } catch (err) {
             console.error(`[OfflineMetadata] Error searching by folder ${folderName}:`, err.message);
         }

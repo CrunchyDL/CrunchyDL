@@ -15,6 +15,7 @@ class CliService {
         this.configService = new ConfigService();
         this.isProcessingQueue = false;
         this.encodingStarts = new Map();
+        this.totalDurations = new Map();
 
         // Reset orphaned downloads from previous session
         this.resetStuckDownloads();
@@ -73,7 +74,11 @@ class CliService {
             const args = ['--service', service, '--search', query];
             console.log(`[CLI] Searching ${service} for: "${query}"`);
             const child = spawn('node', [this.cliPath, ...args], {
-                env: { ...process.env, contentDirectory: path.resolve(__dirname, '../multi-downloader-nx') }
+                env: { 
+                    ...process.env, 
+                    contentDirectory: path.resolve(__dirname, '../multi-downloader-nx'),
+                    CONTENT_DIR: process.env.DOWNLOAD_DIR || path.resolve(__dirname, '../../downloads')
+                }
             });
 
             let output = '';
@@ -130,17 +135,24 @@ class CliService {
         let fileNameTemplate = '[${service}] ${showTitle} - S${season}E${episode} [${height}p]';
         let downloadDir = '';
 
-        // Try to match with library
+        // Try to match with library or use pre-resolved path
         if (this.libService) {
-            const seriesLocation = await this.libService.getSeriesFullDetails(download.show_id);
-            if (seriesLocation && seriesLocation.full_path) {
-                console.log(`[CLI] Series found in library at: ${seriesLocation.full_path}. Using it.`);
-                downloadDir = seriesLocation.full_path;
-                fileNameTemplate = path.join('Season ${season}', fileNameTemplate);
-            } else if (download.path) {
-                console.log(`[CLI] Using provided root path: ${download.path}`);
+            // Priority 1: Check if the download already has a full resolved path in the DB
+            if (download.path && (download.path.includes('Season') || download.path.includes('Temporada'))) {
+                console.log(`[CLI] Using pre-resolved path from DB: ${download.path}`);
                 downloadDir = download.path;
-                fileNameTemplate = path.join('${showTitle}', 'Season ${season}', fileNameTemplate);
+                // fileNameTemplate remains base because downloadDir already includes Season
+            } else {
+                const seriesLocation = await this.libService.getSeriesFullDetails(download.show_id);
+                if (seriesLocation && seriesLocation.full_path) {
+                    console.log(`[CLI] Series found in library at: ${seriesLocation.full_path}. Using it.`);
+                    downloadDir = seriesLocation.full_path;
+                    fileNameTemplate = path.join('Season ${season}', fileNameTemplate);
+                } else if (download.path) {
+                    console.log(`[CLI] Using provided root path: ${download.path}`);
+                    downloadDir = download.path;
+                    fileNameTemplate = path.join('${showTitle}', 'Season ${season}', fileNameTemplate);
+                }
             }
         }
 
@@ -187,7 +199,7 @@ class CliService {
 
             if (muxConfig.videoEncodingEnabled !== false) {
                 if (muxConfig.encodingPreset && muxConfig.encodingPreset !== 'custom') {
-                    const preset = encodingPresets.find(p => p.id === muxConfig.encodingPreset);
+                    const preset = await this.db.get('SELECT * FROM presets WHERE id = ?', muxConfig.encodingPreset);
                     if (preset) {
                         const ffmpegOpts = [
                             `-c:v ${preset.codec}`,
@@ -219,10 +231,17 @@ class CliService {
             '--force', 'Y',
             '--debug'
         );
-
+        const destination = path.join(downloadDir, fileNameTemplate);
+        console.log(`[CLI] Destination Path: ${destination}`);
+        this.io.emit('downloadLogs', { id: downloadId, log: `Destination Path: ${destination}` });
+        
         console.log(`[CLI] Launching with args: ${args.join(' ')}`);
         const child = spawn('node', [this.cliPath, ...args], {
-            env: { ...process.env, contentDirectory: path.resolve(__dirname, '../multi-downloader-nx') }
+            env: { 
+                ...process.env, 
+                contentDirectory: path.resolve(__dirname, '../multi-downloader-nx'),
+                CONTENT_DIR: process.env.DOWNLOAD_DIR || path.resolve(__dirname, '../../downloads')
+            }
         });
         this.activeDownloads.set(downloadId, child);
 
@@ -231,11 +250,32 @@ class CliService {
         const handleLine = async (line) => {
             console.log(`[DL ${downloadId}] ${line}`);
 
+            // Check for total duration (logged by our modified Merger)
+            if (line.includes('[Merger] Total duration:')) {
+                const durationMatch = line.match(/Total duration: ([\d.]+)s/);
+                if (durationMatch) {
+                    this.totalDurations.set(downloadId, parseFloat(durationMatch[1]));
+                    console.log(`[DL ${downloadId}] Captured total duration: ${durationMatch[1]}s`);
+                }
+            }
+
             // Extract progress if possible (e.g. "Progress: 50%" or "[ffmpeg] 45.2%")
             let progress = null;
             const progressMatch = line.match(/(\d+(?:\.\d+)?)%/);
             if (progressMatch) {
                 progress = parseFloat(progressMatch[1]);
+            } else if (line.includes('time=')) {
+                // Handle ffmpeg progress: "time=00:01:23.45"
+                const timeMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+                const totalDuration = this.totalDurations.get(downloadId);
+                if (timeMatch && totalDuration) {
+                    const hours = parseInt(timeMatch[1]);
+                    const minutes = parseInt(timeMatch[2]);
+                    const seconds = parseInt(timeMatch[3]);
+                    const centiseconds = parseInt(timeMatch[4]);
+                    const currentSeconds = (hours * 3600) + (minutes * 60) + seconds + (centiseconds / 100);
+                    progress = Math.min(99.9, (currentSeconds / totalDuration) * 100);
+                }
             }
 
             if (progress !== null) {
@@ -253,7 +293,9 @@ class CliService {
             if (line.includes('Started merging') || line.includes('Starting merge')) {
                 this.encodingStarts.set(downloadId, Date.now());
                 await this.db.run('UPDATE downloads SET status = ? WHERE id = ?', 'encoding', downloadId);
+                await this.db.run('UPDATE downloads SET progress = 0 WHERE id = ?', downloadId); // Reset progress for encoding phase
                 this.io.emit('downloadStatus', { id: downloadId, status: 'encoding' });
+                this.io.emit('downloadProgress', { id: downloadId, progress: 0 });
             }
 
             // Check for decryption start
@@ -318,7 +360,7 @@ class CliService {
 
                 // Mark as downloaded in the library/episodes table ONLY IF SUCCESSFUL
                 if (code === 0) {
-                    const now = new Date().toISOString();
+                    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
                     if (currentTask.episodes === 'all') {
                         await this.db.run(
                             'UPDATE episodes SET is_downloaded = 1, downloaded_at = ? WHERE series_id = ?',
@@ -377,13 +419,69 @@ class CliService {
         return true;
     }
 
-    async addDownload({ name, service, show_id, season_id, episodes, rootPath, triggeredBy = 'SYSTEM' }) {
+    async ensureSeriesFolder(show_id, title, rootPath, seasonNumber = null) {
+        if (!rootPath) return null;
+        
+        try {
+            // 1. Get/Assign folder name
+            let series = await this.db.get('SELECT title, folder_name, lib_path FROM series WHERE id = ?', show_id);
+            if (!series) {
+                 // Try by Crunchyroll ID alias
+                 series = await this.db.get('SELECT title, folder_name, lib_path FROM series WHERE crunchyroll_id = ?', show_id);
+            }
+
+            let folderName = series?.folder_name;
+            const finalTitle = title || series?.title || 'Unknown Series';
+
+            if (!folderName) {
+                folderName = finalTitle.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '_').trim();
+                console.log(`[Queue] Assigning folder name "${folderName}" for series "${finalTitle}"`);
+                await this.db.run('UPDATE series SET folder_name = ?, lib_path = ? WHERE id = ?', folderName, rootPath, show_id);
+                if (series?.crunchyroll_id) {
+                    await this.db.run('UPDATE series SET folder_name = ?, lib_path = ? WHERE crunchyroll_id = ?', folderName, rootPath, show_id);
+                }
+            } else if (!series.lib_path) {
+                await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', rootPath, show_id);
+            }
+
+            // 2. Create directories
+            const seriesDir = path.join(rootPath, folderName);
+            if (!fs.existsSync(seriesDir)) {
+                console.log(`[Queue] Creating series directory: ${seriesDir}`);
+                fs.mkdirSync(seriesDir, { recursive: true });
+            }
+
+            const seasonNum = parseInt(seasonNumber) || 1;
+            const seasonDirName = `Season ${seasonNum.toString().padStart(2, '0')}`;
+            const seasonDir = path.join(seriesDir, seasonDirName);
+            if (!fs.existsSync(seasonDir)) {
+                console.log(`[Queue] Creating season directory: ${seasonDir}`);
+                fs.mkdirSync(seasonDir, { recursive: true });
+            }
+
+            return { seriesDir, seasonDir, folderName };
+        } catch (err) {
+            console.error(`[Queue] Failed to ensure folder structure for ${show_id}:`, err.message);
+            return null;
+        }
+    }
+
+    async addDownload({ name, service, show_id, season_id, episodes, rootPath, triggeredBy = 'SYSTEM', season_number = null, image = null }) {
         // Normalize service name
         const normalizedService = service === 'crunchyroll' ? 'crunchy' : service;
 
+        // Auto-create folders if rootPath is provided
+        let resolvedPath = rootPath;
+        if (rootPath) {
+            const folderInfo = await this.ensureSeriesFolder(show_id, name.split(' - ')[0], rootPath, season_number);
+            if (folderInfo && folderInfo.seasonDir) {
+                resolvedPath = folderInfo.seasonDir;
+            }
+        }
+
         const result = await this.db.run(
-            'INSERT INTO downloads (name, service, show_id, season_id, episodes, path, status, progress, triggered_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            name, normalizedService, show_id, season_id, episodes, rootPath, 'queued', 0, triggeredBy
+            'INSERT INTO downloads (name, service, show_id, season_id, episodes, path, status, progress, triggered_by, thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            name, normalizedService, show_id, season_id, episodes, resolvedPath, 'queued', 0, triggeredBy, image
         );
 
         // Trigger queue processing

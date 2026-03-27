@@ -22,7 +22,12 @@
     "fall": "Otoño",
     "create": "Crear",
     "drives": "Discos",
-    "empty_directory": "Este directorio está vacío"
+    "empty_directory": "Este directorio está vacío",
+    "id": "ID",
+    "group": "Grupo",
+    "general": "General",
+    "other": "Otros",
+    "name": "Nombre"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
@@ -98,6 +103,8 @@
     "catalog_title": "Catálogo",
     "seasonal_subtitle": "Descubre lo que se emite en {{season}} {{year}}.",
     "browse_subtitle": "Explora las series más populares de toda la biblioteca.",
+    "download_season": "Descargar Temporada",
+    "download_missing_season": "Descargar Faltantes (Temp)",
     "search_subtitle": "Resultados de tu búsqueda global en la plataforma.",
     "discovery": "Descubrimiento",
     "search_placeholder": "Busca cualquier cosa en la plataforma...",
@@ -208,6 +215,9 @@
     "scan_now": "Escanear Ahora",
     "change_poster": "Cambiar Poster",
     "no_local_folder": "Sin carpeta local vinculada",
+    "delete_series_confirm": "¿Estás seguro de que quieres eliminar esta serie de la base de datos? Esto no borrará los archivos de video ni el póster.",
+    "delete_series_tooltip": "Eliminar serie de la base de datos",
+    "error_deleting_series": "Error al eliminar la serie de la base de datos",
     "download_missing": "Descargar Faltantes",
     "repair_metadata": "Reparar Metadatos",
     "identify": "Identificar",
@@ -303,6 +313,8 @@
     "auto": "AUTO",
     "manual": "MANUAL",
     "trigger_subscription": "Suscripción",
+    "total_tasks": "Tareas Totales",
+    "active_working": "Procesando",
     "empty": "No hay elementos en la cola de descarga."
   },
   "profile": {
@@ -400,7 +412,19 @@
     "meta_lang_tip": "Este idioma se usará para buscar títulos, descripciones y nombres de episodios en Crunchyroll y otros proveedores.",
     "auth_error": "Error de Autenticación: {{error}}",
     "cpu_threads": "Hilos de CPU",
-    "total_ram": "RAM Total"
+    "total_ram": "RAM Total",
+    "tab_presets": "Presets de Codificación",
+    "encoding_presets": "Presets de Codificación",
+    "manage_presets_desc": "Gestiona y personaliza tus perfiles de codificación de video.",
+    "add_preset": "Añadir Nuevo Preset",
+    "new_preset": "Nuevo Preset de Codificación",
+    "edit_preset": "Editar Preset de Codificación",
+    "codec": "Códec de Video",
+    "resolution": "Resolución",
+    "original": "Original",
+    "preset_id_label": "ID (único)",
+    "preset_id_placeholder": "ej: h264_1080p_alta",
+    "preset_name_placeholder": "ej: 1080p H.264 Alta Calidad"
   },
   "setup": {
     "welcome": "¡Bienvenido!",

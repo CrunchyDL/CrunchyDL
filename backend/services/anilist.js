@@ -107,7 +107,8 @@ class AnilistService {
                 const crLink = m.externalLinks?.find(l => l.site === 'Crunchyroll');
                 let crId = null;
                 if (crLink) {
-                    const match = crLink.url.match(/series\/([^\/]+)/);
+                    // Handle both modern (/series/ID) and legacy (/ID) formats
+                    const match = crLink.url.match(/(?:series\/|crunchyroll\.com\/)([^\/\?]+)/);
                     if (match) crId = match[1];
                 }
 
@@ -186,7 +187,8 @@ class AnilistService {
             const crLink = m.externalLinks?.find(l => l.site === 'Crunchyroll');
             let crId = null;
             if (crLink) {
-                const match = crLink.url.match(/series\/([^\/]+)/);
+                // Handle both modern (/series/ID) and legacy (/ID) formats
+                const match = crLink.url.match(/(?:series\/|crunchyroll\.com\/)([^\/\?]+)/);
                 if (match) crId = match[1];
             }
 

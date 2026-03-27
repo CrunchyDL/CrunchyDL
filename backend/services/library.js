@@ -150,6 +150,27 @@ class LibraryService {
                 }
             });
             await Promise.all(workers);
+
+            // Cleanup: Remove series whose folders no longer exist in any library path
+            const dbSeries = await this.db.all('SELECT id, folder_name, lib_path FROM series');
+            for (const s of dbSeries) {
+                if (s.folder_name) {
+                    let exists = false;
+                    for (const lp of this.libraryPaths) {
+                        if (fs.existsSync(path.join(lp, s.folder_name))) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        console.log(`[Library] Folder missing for series "${s.folder_name}" (${s.id}). Deleting record.`);
+                        await this.db.run('DELETE FROM series WHERE id = ?', s.id);
+                        await this.db.run('DELETE FROM seasons WHERE series_id = ?', s.id);
+                        await this.db.run('DELETE FROM episodes WHERE series_id = ?', s.id);
+                        await offlineMetadata.delete(s.id);
+                    }
+                }
+            }
         } catch (err) {
             console.error('[Library] Scan error:', err);
         } finally {
@@ -160,20 +181,25 @@ class LibraryService {
     }
 
     async syncSeries(libPath, folderName, forceRefresh = false, searchQuery = null) {
+        console.log(`[Library] [Sync] ${folderName} (Force: ${forceRefresh})`);
         const seriesPath = path.join(libPath, folderName);
-        let series = await this.db.get('SELECT * FROM series WHERE folder_name = ?', folderName);
+        // Prioritize identified series over local- stubs when multiple records exist for the same folder
+        let series = await this.db.get('SELECT * FROM series WHERE folder_name = ? ORDER BY (id NOT LIKE "local-%") DESC, needs_review ASC LIMIT 1', folderName);
         
+        if (series) console.log(`[Library] [Sync] Found current record: ${series.id} (needs_review: ${series.needs_review})`);
+
         // Path Portability: If found but lib_path is different, update it
         if (series && series.lib_path !== libPath) {
-            console.log(`[Library] Updating lib_path for ${folderName}: ${series.lib_path} -> ${libPath}`);
+            console.log(`[Library] [Sync] Updating lib_path for ${folderName}: ${series.lib_path} -> ${libPath}`);
             await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', libPath, series.id);
             series.lib_path = libPath;
         }
 
         if (!series) {
+            console.log(`[Library] [Sync] No record for folder "${folderName}". Checking offline metadata...`);
             const offlineMatch = await offlineMetadata.findByFolderName(folderName);
             if (offlineMatch) {
-                console.log(`[Library] [Offline] Found global metadata for ${offlineMatch.title} linked to folder ${folderName}`);
+                console.log(`[Library] [Sync] [Offline] Recovering ${offlineMatch.id} for folder ${folderName}`);
                 await this.db.run(`INSERT OR IGNORE INTO series (id, title, description, image, folder_name, metadata_provider, lib_path, crunchyroll_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                     offlineMatch.id, offlineMatch.title, offlineMatch.description, offlineMatch.image, folderName, offlineMatch.source || 'unknown', libPath, offlineMatch.crunchyroll_id);
                 await this.db.run('UPDATE series SET folder_name = ?, lib_path = ? WHERE id = ?', folderName, libPath, offlineMatch.id);
@@ -182,14 +208,15 @@ class LibraryService {
         }
 
         if (!series) {
-            const candidates = await this.db.all('SELECT * FROM series WHERE folder_name IS NULL OR folder_name = ""');
+            console.log(`[Library] [Sync] Still no record. Checking orphaned candidates...`);
+            const candidates = await this.db.all('SELECT * FROM series WHERE (folder_name IS NULL OR folder_name = "") ORDER BY (id NOT LIKE "local-%") DESC, created_at ASC');
             for (const cand of candidates) {
                 const similarity = this.calculateSimilarity(folderName, cand.title);
                 const folderContainsTitle = folderName.toLowerCase().includes(cand.title.toLowerCase());
                 const titleContainsFolder = cand.title.toLowerCase().includes(folderName.toLowerCase());
                 
                 if (similarity > 0.80 || folderContainsTitle || titleContainsFolder) {
-                    console.log(`[Library] Auto-linked folder "${folderName}" to existing series "${cand.title}" (similarity: ${similarity.toFixed(2)})`);
+                    console.log(`[Library] [Sync] Auto-linked folder "${folderName}" to orphan "${cand.title}" (${cand.id})`);
                     await this.db.run('UPDATE series SET folder_name = ?, lib_path = ? WHERE id = ?', folderName, libPath, cand.id);
                     series = await this.db.get('SELECT * FROM series WHERE id = ?', cand.id);
                     break;
@@ -197,7 +224,15 @@ class LibraryService {
             }
         }
 
-        if (!series || forceRefresh || (series.id.startsWith('local-') && !searchQuery)) {
+        const shouldSkipSearch = series && !series.id.startsWith('local-') && series.needs_review === 0 && !forceRefresh;
+        if (shouldSkipSearch) {
+            console.log(`[Library] [Sync] Skipping network search for identified series ${series.id}`);
+        }
+
+        // IMPORTANT: Only re-identify automatically if it's a new series, a force refresh is requested,
+        // or it's a local series that hasn't been manually approved (needs_review !== 0).
+        if (!series || (forceRefresh && !shouldSkipSearch) || (series.id.startsWith('local-') && series.needs_review !== 0 && !searchQuery)) {
+            console.log(`[Library] [Sync] Entering network identification for ${folderName}...`);
             const queryName = searchQuery || (series ? series.title : folderName);
             const muxConfig = await this.configService.getMuxingConfig();
             const providers = muxConfig.metadataProviders || ['crunchy', 'anilist'];
@@ -222,6 +257,7 @@ class LibraryService {
             }
 
             if (match) {
+                console.log(`[Library] [Sync] Best match found: ${match.title} (${match.id}) via ${usedProvider}`);
                 let needsReview = this.calculateSimilarity(folderName, match.title) < 0.7 ? 1 : 0;
                 // If the series already exists and was previously approved (needs_review === 0), respect that
                 if (series && series.needs_review === 0 && !forceRefresh) {
@@ -235,6 +271,7 @@ class LibraryService {
                         const alResults = await anilistService.searchSeries(match.title);
                         if (alResults?.[0] && this.calculateSimilarity(match.title, alResults[0].title) > 0.8) {
                             finalId = alResults[0].id;
+                            console.log(`[Library] [Sync] Prioritizing AniList ID: ${finalId}`);
                         }
                     } catch { }
                 }
@@ -247,7 +284,7 @@ class LibraryService {
                 if (!existingById && crLinkId) {
                     const existingByCr = await this.db.get('SELECT * FROM series WHERE crunchyroll_id = ?', crLinkId);
                     if (existingByCr && !finalId.startsWith('local-')) {
-                        console.log(`[Library] Found existing series ${existingByCr.id} by Crunchyroll ID ${crLinkId}. Re-linking to ${finalId}`);
+                        console.log(`[Library] [Sync] Found existing ${existingByCr.id} by CR ID. Merging into ${finalId}`);
                         if (!currentId) currentId = existingByCr.id;
                     }
                 }
@@ -256,13 +293,15 @@ class LibraryService {
                     await this.db.run(`UPDATE series SET title = ?, description = ?, image = ?, folder_name = ?, metadata_provider = ?, needs_review = ?, lib_path = ?, crunchyroll_id = ? WHERE id = ?`,
                         match.title, match.description, match.image, folderName, usedProvider, needsReview, libPath, crLinkId, finalId);
                 } else {
-                    await this.db.run(`INSERT INTO series (id, title, description, image, folder_name, metadata_provider, needs_review, lib_path, crunchyroll_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    await this.db.run(`INSERT OR IGNORE INTO series (id, title, description, image, folder_name, metadata_provider, needs_review, lib_path, crunchyroll_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         finalId, match.title, match.description, match.image, folderName, usedProvider, needsReview, libPath, crLinkId);
+                    // Standardize if it already existed but wasn't caught by existingById (e.g. ID mismatch but folder match)
+                    await this.db.run(`UPDATE series SET folder_name = ?, lib_path = ? WHERE id = ?`, folderName, libPath, finalId);
                 }
 
                 // Migration logic: If ID changed, update linked data
                 if (currentId && currentId !== finalId) {
-                    console.log(`[Library] Migrating series ${folderName} from ${currentId} to ${finalId}`);
+                    console.log(`[Library] [Sync] Finalizing migration: ${currentId} -> ${finalId}`);
                     
                     // Update all dependent tables
                     await this.db.run('UPDATE episodes SET series_id = ? WHERE series_id = ?', finalId, currentId);
@@ -289,7 +328,7 @@ class LibraryService {
                     if (localFile) { await this.db.run('UPDATE series SET image = ? WHERE id = ?', localFile, finalId); series.image = localFile; }
                 }
             } else if (!series && !hasNetworkError) {
-                // Persistent failure with NO network errors = true local series
+                console.log(`[Library] [Sync] Persistent identify failure for ${folderName}. Creating local stub.`);
                 const dummyId = `local-${crypto.randomBytes(4).toString('hex')}`;
                 await this.db.run(`INSERT OR IGNORE INTO series (id, title, folder_name, needs_review, metadata_provider, lib_path) VALUES (?, ?, ?, ?, ?, ?)`,
                     dummyId, folderName, folderName, 1, 'none', libPath);
@@ -335,30 +374,59 @@ class LibraryService {
                 return;
             }
 
-            // 2. Fetch from Catalog if offline is missing or refresh forced
+            // 2. Determine best provider for online metadata (AniList is priority)
             const crId = series.crunchyroll_id;
-            if (crId) {
-                console.log(`[Library] Fetching online metadata for ${series.title} (${crId})...`);
-                const details = await catalogService.getSeriesDetails(crId);
-                if (details?.seasons) {
-                    for (const s of details.seasons) {
-                        await this._mergeSeason(series.id, s.id, s.title, s.season_number);
-                        const episodes = await catalogService.getEpisodes(s.id);
-                        for (const ep of episodes) {
-                            const ext = await this.db.get('SELECT path, is_downloaded FROM episodes WHERE id = ?', ep.id);
-                            if (ext) await this.db.run(`UPDATE episodes SET season_id = ?, series_id = ?, title = ?, episode_number = ? WHERE id = ?`, s.id, series.id, ep.title, ep.episode_number, ep.id);
-                            else await this.db.run(`INSERT INTO episodes (id, season_id, series_id, title, episode_number) VALUES (?, ?, ?, ?, ?)`, ep.id, s.id, series.id, ep.title, ep.episode_number);
-                        }
-                        s.episodes = episodes; // For later saving to JSON
-                    }
+            let details = null;
+            let provider = null;
+
+            if (series.id.startsWith('al-')) {
+                console.log(`[Library] Fetching AniList metadata (Priority) for ${series.title} (${series.id})...`);
+                details = await anilistService.getSeriesDetails(series.id).catch(async (e) => {
+                    console.error(`[Library] AniList refresh failed, falling back to Crunchyroll:`, e.message);
+                    return crId ? await catalogService.getSeriesDetails(crId) : null;
+                });
+                provider = details ? (details.id.startsWith('al-') ? 'anilist' : 'crunchyroll') : null;
+            } else if (crId) {
+                console.log(`[Library] Fetching Crunchyroll metadata for ${series.title} (${crId})...`);
+                details = await catalogService.getSeriesDetails(crId).catch(async (e) => {
+                    console.error(`[Library] Crunchyroll refresh failed, falling back to AniList:`, e.message);
+                    return series.id.startsWith('al-') ? await anilistService.getSeriesDetails(series.id) : null;
+                });
+                provider = details ? (details.id.startsWith('al-') ? 'anilist' : 'crunchyroll') : null;
+            }
+
+            if (details?.seasons) {
+                for (const s of details.seasons) {
+                    await this._mergeSeason(series.id, s.id, s.title, s.season_number);
                     
-                    // 3. Update the offline metadata file with the full enriched data
-                    const seriesPath = path.join(series.lib_path, series.folder_name);
-                    await offlineMetadata.save(seriesPath, {
-                        ...series,
-                        seasons: details.seasons,
-                        source: series.metadata_provider
-                    });
+                    let episodes = [];
+                    if (provider === 'crunchyroll') {
+                        episodes = await catalogService.getEpisodes(s.id);
+                    } else if (provider === 'anilist') {
+                        episodes = await anilistService.getEpisodes(s.id);
+                    }
+
+                    for (const ep of episodes) {
+                        const ext = await this.db.get('SELECT path, is_downloaded FROM episodes WHERE id = ?', ep.id);
+                        if (ext) await this.db.run(`UPDATE episodes SET season_id = ?, series_id = ?, title = ?, episode_number = ? WHERE id = ?`, s.id, series.id, ep.title, ep.episode_number, ep.id);
+                        else await this.db.run(`INSERT INTO episodes (id, season_id, series_id, title, episode_number) VALUES (?, ?, ?, ?, ?)`, ep.id, s.id, series.id, ep.title, ep.episode_number);
+                    }
+                    s.episodes = episodes; // For later saving to JSON
+                }
+                
+                // 3. Update the offline metadata file
+                const seriesPath = path.join(series.lib_path, series.folder_name);
+                await offlineMetadata.save(seriesPath, {
+                    ...series,
+                    seasons: details.seasons,
+                    source: provider
+                });
+
+                // 4. Update Crunchyroll ID if it was resolved (slug -> UUID) or found via AniList
+                const newCrId = provider === 'crunchyroll' ? details.id : (details.crunchyroll_id || null);
+                if (newCrId && series.crunchyroll_id !== newCrId) {
+                    console.log(`[Library] Updating Crunchyroll ID for ${series.id}: ${series.crunchyroll_id} -> ${newCrId}`);
+                    await this.db.run('UPDATE series SET crunchyroll_id = ? WHERE id = ?', newCrId, series.id);
                 }
             }
         } catch (err) { console.error(`[Library] Metadata refresh error for ${seriesId}:`, err.message); }
@@ -632,6 +700,29 @@ class LibraryService {
         return true;
     }
 
+    async deleteSeries(seriesId) {
+        console.log(`[Library] Deleting series ${seriesId} from database...`);
+        
+        // 1. Delete associated episodes
+        await this.db.run('DELETE FROM episodes WHERE series_id = ?', seriesId);
+        
+        // 2. Delete associated seasons
+        await this.db.run('DELETE FROM seasons WHERE series_id = ?', seriesId);
+        
+        // 3. Delete from subscriptions and suggestions
+        await this.db.run('DELETE FROM subscriptions WHERE series_id = ?', seriesId);
+        await this.db.run('DELETE FROM suggestions WHERE series_id = ?', seriesId);
+        
+        // 4. Delete the series record itself
+        await this.db.run('DELETE FROM series WHERE id = ?', seriesId);
+        
+        // 5. Cleanup offline metadata cache
+        await offlineMetadata.delete(seriesId);
+        
+        console.log(`[Library] Series ${seriesId} deleted successfully.`);
+        return true;
+    }
+
     async refreshSeriesMetadata(seriesId, searchQuery = null) {
         const series = await this.db.get('SELECT * FROM series WHERE id = ? OR crunchyroll_id = ?', seriesId, seriesId);
         if (!series) throw new Error('Series not found');
@@ -655,56 +746,128 @@ class LibraryService {
     }
 
     async rebindSeries(oldSeriesId, match) {
-        const oldSeries = await this.db.get('SELECT folder_name FROM series WHERE id = ?', oldSeriesId);
+        const oldSeries = await this.db.get('SELECT id, folder_name, title FROM series WHERE id = ?', oldSeriesId);
         let folderName = oldSeries?.folder_name;
 
         if (!folderName) {
-            // Try by Crunchyroll ID alias if ID is not found or has no folder
             const byCr = await this.db.get('SELECT folder_name FROM series WHERE crunchyroll_id = ? AND folder_name IS NOT NULL', oldSeriesId);
             folderName = byCr?.folder_name;
-            if (!folderName) {
-                // FALLBACK: If folder is missing, try to find it by ID
-                console.warn(`[Rebind] Series ${oldSeriesId} has no folder_name. Looking for existing link...`);
-                // If it's a placeholder, we just want to update the ID
-                await this.db.run('UPDATE series SET id = ?, crunchyroll_id = ?, metadata_provider = ?, needs_review = 0 WHERE id = ?', 
-                    match.id, match.id, 'crunchyroll', oldSeriesId);
-                return;
+        }
+
+        // Recovery 1: Try reading from offline metadata file for the old ID
+        if (!folderName) {
+            try {
+                const offline = await offlineMetadata.read(oldSeriesId);
+                if (offline?.folder_name) {
+                    folderName = offline.folder_name;
+                    console.log(`[Library] Recovered folder name "${folderName}" from offline metadata for ${oldSeriesId}`);
+                }
+            } catch (e) { }
+        }
+
+        // Recovery 2: Search disk for matching folder if title is known
+        if (!folderName) {
+            const target = oldSeries?.title;
+            if (target) {
+                for (const lp of this.libraryPaths) {
+                    const p = path.join(lp, target);
+                    if (fs.existsSync(p)) {
+                        folderName = target;
+                        console.log(`[Library] Recovered folder name "${folderName}" by disk matching for ${oldSeriesId}`);
+                        break;
+                    }
+                }
             }
         }
 
         if (!folderName) throw new Error(`Series folder not found for ID or CR ID: ${oldSeriesId}`);
+
         let foundLibPath = null;
-        for (const lp of this.libraryPaths) { if (fs.existsSync(path.join(lp, folderName))) { foundLibPath = lp; break; } }
+        for (const lp of this.libraryPaths) {
+            if (fs.existsSync(path.join(lp, folderName))) {
+                foundLibPath = lp;
+                break;
+            }
+        }
 
+        // 1. Clear identifying folder_name from ANY existing records to avoid UNIQUE constraint issues
         await this.db.run('UPDATE series SET folder_name = NULL WHERE folder_name = ?', folderName);
-        await this.db.run('UPDATE episodes SET is_downloaded = 0, path = NULL WHERE series_id = ?', oldSeriesId);
 
-        let existing = await this.db.get('SELECT * FROM series WHERE id = ?', match.id);
+        // Auto-discover Crunchyroll ID if missing but ID is AniList
+        if (!match.crunchyroll_id && match.id.startsWith('al-')) {
+            try {
+                const details = await anilistService.getSeriesDetails(match.id);
+                if (details?.crunchyroll_id) {
+                    match.crunchyroll_id = details.crunchyroll_id;
+                    console.log(`[Library] Enriched AniList match with Crunchyroll ID: ${match.crunchyroll_id}`);
+                }
+            } catch (e) { }
+        }
+
         const metaProvider = match.source === 'crunchyroll' ? 'crunchy' : (match.source || 'none');
         const crId = (metaProvider === 'crunchy') ? match.id : (match.crunchyroll_id || null);
 
-        if (existing) await this.db.run(`UPDATE series SET title = ?, description = ?, image = ?, folder_name = ?, mal_id = ?, metadata_provider = ?, lib_path = ?, crunchyroll_id = ?, needs_review = 0 WHERE id = ?`,
-            match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId, match.id);
-        else await this.db.run(`INSERT INTO series (id, title, description, image, folder_name, mal_id, metadata_provider, lib_path, crunchyroll_id, needs_review) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-            match.id, match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId);
+        // 2. Update or Insert the new series record
+        let existing = await this.db.get('SELECT * FROM series WHERE id = ?', match.id);
+        if (existing) {
+            await this.db.run(`UPDATE series SET title = ?, description = ?, image = ?, folder_name = ?, mal_id = ?, metadata_provider = ?, lib_path = ?, crunchyroll_id = ?, needs_review = 0 WHERE id = ?`,
+                match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId, match.id);
+        } else {
+            await this.db.run(`INSERT INTO series (id, title, description, image, folder_name, mal_id, metadata_provider, lib_path, crunchyroll_id, needs_review) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+                match.id, match.title, match.description, match.image, folderName, match.mal_id || null, metaProvider, foundLibPath, crId);
+        }
 
+        // 3. Migrate related data if the ID changed
+        if (oldSeriesId !== match.id) {
+            console.log(`[Library] Migrating series data from ${oldSeriesId} to ${match.id}`);
+            
+            // Move episodes
+            await this.db.run('UPDATE episodes SET series_id = ? WHERE series_id = ?', match.id, oldSeriesId);
+            
+            // Move seasons using the helper to handle constraints and merging
+            const oldSeasons = await this.db.all('SELECT * FROM seasons WHERE series_id = ?', oldSeriesId);
+            for (const s of oldSeasons) {
+                await this._mergeSeason(match.id, s.id, s.title, s.season_number);
+            }
+
+            // Move Subscriptions (handle unique constraint)
+            try {
+                await this.db.run('UPDATE subscriptions SET series_id = ? WHERE series_id = ?', match.id, oldSeriesId);
+            } catch (e) {
+                // If relationship already exists (unlikely but possible), delete the redundant old one
+                await this.db.run('DELETE FROM subscriptions WHERE series_id = ?', oldSeriesId);
+            }
+
+            // Move Suggestions
+            await this.db.run('UPDATE suggestions SET series_id = ? WHERE series_id = ?', match.id, oldSeriesId);
+
+            // Final safety check: clean up any remaining orphaned children that might still reference old ID
+            // (e.g. if some logic bypassed the normal creation flow)
+            await this.db.run('UPDATE episodes SET series_id = ? WHERE series_id = ?', match.id, oldSeriesId);
+            await this.db.run('UPDATE OR IGNORE seasons SET series_id = ? WHERE series_id = ?', match.id, oldSeriesId);
+            await this.db.run('DELETE FROM seasons WHERE series_id = ?', oldSeriesId);
+            await this.db.run('DELETE FROM episodes WHERE series_id = ?', oldSeriesId);
+
+            // Cleanup old series and its metadata file
+            await this.db.run('DELETE FROM series WHERE id = ?', oldSeriesId);
+            await offlineMetadata.delete(oldSeriesId);
+        }
+
+        // 4. Persist new metadata
         if (match.image) {
             const localFile = await this._downloadPoster(match.image, match.id);
-            if (localFile) { await this.db.run('UPDATE series SET image = ? WHERE id = ?', localFile, match.id); match.image = localFile; }
+            if (localFile) {
+                await this.db.run('UPDATE series SET image = ? WHERE id = ?', localFile, match.id);
+                match.image = localFile;
+            }
         }
 
         if (foundLibPath) await offlineMetadata.save(path.join(foundLibPath, folderName), match);
+        
+        // 5. Refresh full metadata and re-scan files to ensure everything is matched
         if (!match.id.startsWith('local-')) await this.refreshMetadata(match.id);
         if (foundLibPath) await this.scanLocalFiles(path.join(foundLibPath, folderName), match.id);
 
-        if (oldSeriesId !== match.id) {
-            const hasOther = await this.db.get('SELECT id FROM series WHERE id = ? AND folder_name IS NOT NULL', oldSeriesId);
-            if (!hasOther) {
-                await this.db.run('DELETE FROM episodes WHERE series_id = ?', oldSeriesId);
-                await this.db.run('DELETE FROM seasons WHERE series_id = ?', oldSeriesId);
-                await this.db.run('DELETE FROM series WHERE id = ?', oldSeriesId);
-            }
-        }
         return await this.db.get('SELECT * FROM series WHERE id = ?', match.id);
     }
 

@@ -395,6 +395,17 @@ class CatalogService {
 
   async getSeriesDetails(seriesId) {
     try {
+      // If seriesId is a slug (e.g. from AniList legacy URLs), resolve it to a UUID
+      if (seriesId && !/^[A-Z0-9]{9}$/.test(seriesId)) {
+        console.log(`[Catalog] Resolving slug "${seriesId}" to UUID...`);
+        const searchResults = await this.searchSeries(seriesId);
+        const match = searchResults.find(r => r.id && /^[A-Z0-9]{9}$/.test(r.id));
+        if (match) {
+          seriesId = match.id;
+          console.log(`[Catalog] Slug resolved to ${seriesId}`);
+        }
+      }
+
       const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
 
@@ -483,6 +494,17 @@ class CatalogService {
 
   async getSeriesInfo(seriesId) {
     try {
+      // If seriesId is a slug (e.g. from AniList legacy URLs), resolve it to a UUID
+      if (seriesId && !/^[A-Z0-9]{9}$/.test(seriesId)) {
+        console.log(`[Catalog] Resolving slug "${seriesId}" to UUID for info...`);
+        const searchResults = await this.searchSeries(seriesId);
+        const match = searchResults.find(r => r.id && /^[A-Z0-9]{9}$/.test(r.id));
+        if (match) {
+          seriesId = match.id;
+          console.log(`[Catalog] Slug resolved to ${seriesId} for info`);
+        }
+      }
+
       const locale = await this.getMetadataLocale();
       const cms = await this._getCmsCredentials();
       const response = await this._request('get', `${this.apiBase}/content/v2/cms/series/${seriesId}`, {

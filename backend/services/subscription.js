@@ -156,7 +156,8 @@ class SubscriptionService {
                             season_number: ep.season_number,
                             episodes: epNum.toString(),
                             rootPath: sub.root_path || series.lib_path,
-                            triggeredBy: 'system:subscription'
+                            triggeredBy: 'system:subscription',
+                            image: details.image || series.image
                         });
                         episodesQueued++;
                     }
@@ -218,14 +219,22 @@ class SubscriptionService {
             `, seriesId, title, info?.description || '', info?.image || '', seriesId);
         }
 
-        // 2. Resolve final rootPath: Prioritize manually selected, then existing library path
-        const finalRootPath = rootPath || series?.lib_path;
+        // 2. Resolve final rootPath and ensure folder structure
+        let finalRootPath = rootPath;
+        let folderName = series?.folder_name;
+
+        if (finalRootPath) {
+            const folderInfo = await this.cliService.ensureSeriesFolder(seriesId, title, finalRootPath);
+            folderName = folderInfo?.folderName;
+        } else {
+            finalRootPath = series?.lib_path;
+        }
 
         // 3. AUTO CATCH-UP: If nextEpisode is 1 (default) and we have a path, scan for existing files
         let finalNextEp = nextEpisode;
-        if (finalNextEp <= 1 && finalRootPath && series?.folder_name) {
+        if (finalNextEp <= 1 && finalRootPath && folderName) {
             try {
-                const scanPath = path.join(finalRootPath, series.folder_name);
+                const scanPath = path.join(finalRootPath, folderName);
                 if (fs.existsSync(scanPath)) {
                     const lastOnDisk = await this.libraryService.findLastEpisodeNumberOnDisk(scanPath);
                     if (lastOnDisk > 0) {

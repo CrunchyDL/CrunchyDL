@@ -26,7 +26,7 @@ const SCHEMA = `
         title TEXT NOT NULL,
         description TEXT,
         image TEXT,
-        folder_name TEXT,
+        folder_name VARCHAR(255),
         metadata_provider VARCHAR(50),
         needs_review INTEGER DEFAULT 0,
         mal_id INTEGER,
@@ -74,7 +74,8 @@ const SCHEMA = `
         path TEXT,
         encoding_time INTEGER,
         triggered_by VARCHAR(255) DEFAULT 'user',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        thumbnail TEXT
     );
 
     CREATE TABLE IF NOT EXISTS subscriptions (
@@ -147,31 +148,44 @@ const SCHEMA = `
         category VARCHAR(50) DEFAULT 'general',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS presets (
+        id VARCHAR(100) PRIMARY KEY,
+        name TEXT NOT NULL,
+        codec VARCHAR(50) NOT NULL,
+        resolution VARCHAR(50),
+        fps VARCHAR(50),
+        crf INTEGER,
+        \`group\` VARCHAR(100),
+        is_default INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    ALTER TABLE downloads ADD COLUMN thumbnail TEXT;
+    -- Fix for MySQL: TEXT columns cannot be unique without a length
+    ALTER TABLE series MODIFY COLUMN folder_name VARCHAR(255); 
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_series_folder_name ON series(folder_name);
 `;
 
-// Helper for schema normalization between SQLite and MySQL
 function normalizeSchema(sql, type) {
     if (type === 'sqlite') {
         return sql.replace(/AUTO_INCREMENT/g, 'AUTOINCREMENT')
-                  .replace(/VARCHAR\(\d+\)/g, 'TEXT')
-                  .replace(/DOUBLE/g, 'REAL')
-                  .replace(/\`key\`/g, 'key')
-                  .replace(/INSERT IGNORE INTO/g, 'INSERT OR IGNORE INTO');
+            .replace(/VARCHAR\(\d+\)/g, 'TEXT')
+            .replace(/DOUBLE/g, 'REAL')
+            .replace(/\\\`key\\\`/g, 'key')
+            .replace(/INSERT IGNORE INTO/g, 'INSERT OR IGNORE INTO')
+            .replace(/ALTER TABLE \\w+ MODIFY COLUMN .*?;/gi, '');
     } else if (type === 'mysql') {
         return sql.replace(/INSERT OR IGNORE INTO/gi, 'INSERT IGNORE INTO')
-                  .replace(/UPDATE OR IGNORE/gi, 'UPDATE IGNORE')
-                  .replace(/INSERT OR REPLACE INTO/gi, 'REPLACE INTO')
-                  .replace(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, 'CREATE $1 INDEX $2 ON $3')
-                  .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT')
-                  .replace(/INSERT INTO (\w+) \((.*?)\) VALUES \((.*?)\) ON CONFLICT\((.*?)\) DO UPDATE SET (.*)/gi, (match, table, cols, vals, conflictCol, update) => {
-                      // Convert SQLite ON CONFLICT to MySQL ON DUPLICATE KEY UPDATE
-                      const mysqlUpdate = update.replace(/excluded\./g, 'VALUES(').replace(/,/g, '),').replace(/$/, ')');
-                      // Actually simpler for just one field like 'value':
-                      if (update.includes('value = excluded.value')) {
-                          return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON DUPLICATE KEY UPDATE value = VALUES(value)`;
-                      }
-                      return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON DUPLICATE KEY UPDATE ${update.replace(/excluded\./g, 'VALUES(')}`;
-                  });
+            .replace(/UPDATE OR IGNORE/gi, 'UPDATE IGNORE')
+            .replace(/INSERT OR REPLACE INTO/gi, 'REPLACE INTO')
+            .replace(/CREATE (UNIQUE )?INDEX IF NOT EXISTS (\w+) ON (\w+)/gi, 'CREATE $1 INDEX $2 ON $3')
+            .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INTEGER PRIMARY KEY AUTO_INCREMENT')
+            .replace(/INSERT INTO (\w+) \((.*?)\) VALUES \((.*?)\) ON CONFLICT\((.*?)\) DO UPDATE SET (.*)/gi, (match, table, cols, vals, conflictCol, update) => {
+                // Convert SQLite ON CONFLICT to MySQL ON DUPLICATE KEY UPDATE
+                const mysqlUpdate = update.replace(/excluded\.(\w+)/g, 'VALUES(`$1`)');
+                return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON DUPLICATE KEY UPDATE ${mysqlUpdate}`;
+            });
     }
     return sql;
 }
@@ -184,7 +198,7 @@ async function setupDb(configInput = null) {
         try {
             let config = configInput;
             const configPath = path.join(__dirname, '..', 'data', 'config.json');
-            
+
             if (!config && fs.existsSync(configPath)) {
                 config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
             }
@@ -205,23 +219,38 @@ async function setupDb(configInput = null) {
                     port: config.mysql.port || 3306,
                     multipleStatements: true
                 });
-                
+
                 // Wrap MySQL connection in an "adapter" that mimics the sqlite API
                 db = {
                     get: async (sql, ...params) => {
-                        const sanitized = params.map(p => p === undefined ? null : p);
-                        const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
-                        return rows[0];
+                        try {
+                            const sanitized = params.map(p => p === undefined ? null : p);
+                            const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                            return rows[0];
+                        } catch (err) {
+                            console.error('[DB] MySQL Get Error:', err.message, '| SQL:', sql);
+                            throw err;
+                        }
                     },
                     all: async (sql, ...params) => {
-                        const sanitized = params.map(p => p === undefined ? null : p);
-                        const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
-                        return rows;
+                        try {
+                            const sanitized = params.map(p => p === undefined ? null : p);
+                            const [rows] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                            return rows;
+                        } catch (err) {
+                            console.error('[DB] MySQL All Error:', err.message, '| SQL:', sql);
+                            throw err;
+                        }
                     },
                     run: async (sql, ...params) => {
-                        const sanitized = params.map(p => p === undefined ? null : p);
-                        const [result] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
-                        return { lastID: result.insertId, changes: result.affectedRows };
+                        try {
+                            const sanitized = params.map(p => p === undefined ? null : p);
+                            const [result] = await connection.execute(normalizeSchema(sql, 'mysql'), sanitized);
+                            return { lastID: result.insertId, changes: result.affectedRows };
+                        } catch (err) {
+                            console.error('[DB] MySQL Run Error:', err.message, '| SQL:', sql);
+                            throw err;
+                        }
                     },
                     exec: async (sql) => {
                         return await connection.query(normalizeSchema(sql, 'mysql'));
@@ -236,43 +265,64 @@ async function setupDb(configInput = null) {
                     fs.mkdirSync(dbDir, { recursive: true });
                 }
 
-                const postersDir = path.join(dbDir, 'posters');
-                if (!fs.existsSync(postersDir)) {
-                    fs.mkdirSync(postersDir, { recursive: true });
-                }
-
-                const avatarsDir = path.join(dbDir, 'avatars');
-                if (!fs.existsSync(avatarsDir)) {
-                    fs.mkdirSync(avatarsDir, { recursive: true });
-                }
-
                 db = await open({
                     filename: path.resolve(__dirname, '..', dbPath),
                     driver: sqlite3.Database
                 });
 
+                const postersDir = path.join(dbDir, 'posters');
+                if (!fs.existsSync(postersDir)) fs.mkdirSync(postersDir, { recursive: true });
+
+                const avatarsDir = path.join(dbDir, 'avatars');
+                if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
+
                 await db.exec('PRAGMA journal_mode = WAL;');
                 await db.exec('PRAGMA busy_timeout = 10000;');
             }
 
-            // Create Tables
+            // Cleanup duplicates for folder_name
+            try {
+                if (config.dbType === 'mysql') {
+                    await db.exec(`
+                        UPDATE series s1
+                        JOIN (
+                            SELECT id, ROW_NUMBER() OVER (PARTITION BY folder_name ORDER BY (id NOT LIKE 'local-%') DESC, created_at ASC) as rn
+                            FROM series
+                            WHERE folder_name IS NOT NULL AND folder_name != ''
+                        ) s2 ON s1.id = s2.id
+                        SET s1.folder_name = NULL
+                        WHERE s2.rn > 1;
+                    `);
+                } else {
+                    await db.exec(`
+                        UPDATE series SET folder_name = NULL 
+                        WHERE id NOT IN (
+                            SELECT id FROM (
+                                SELECT id, ROW_NUMBER() OVER (PARTITION BY folder_name ORDER BY (id NOT LIKE 'local-%') DESC, created_at ASC) as rn
+                                FROM series
+                                WHERE folder_name IS NOT NULL AND folder_name != ''
+                            ) t WHERE t.rn = 1
+                        ) AND folder_name IS NOT NULL;
+                    `);
+                }
+            } catch (cleanupErr) {
+                console.warn('[DB] Duplicate folder_name cleanup failed:', cleanupErr.message);
+            }
+
             const normalizedSql = normalizeSchema(SCHEMA, config.dbType || 'sqlite');
             const statements = normalizedSql.split(';').filter(s => s.trim().length > 0);
             for (const s of statements) {
                 try {
                     await db.exec(s + ';');
                 } catch (e) {
-                    // Ignore "already exists" errors during initialization
                     const msg = e.message.toLowerCase();
                     if (msg.includes('already exists') || msg.includes('duplicate key') || msg.includes('duplicate column') || msg.includes('duplicate entry')) {
                         continue;
                     }
-                    // MySQL specific duplicate index/table errors
                     if (e.code === 'ER_DUP_KEYNAME' || e.code === 'ER_TABLE_EXISTS_ERROR' || e.code === 'ER_DUP_FIELDNAME') {
                         continue;
                     }
-                    console.error(`[DB] Error executing statement: ${s.substring(0, 50)}...`, e.message);
-                    // For critical errors we might want to throw, but for schema migration we often want to continue
+                    console.error("[DB] Error executing statement:", s.substring(0, 50), e.message);
                     if (msg.includes('syntax error') || e.code === 'ER_PARSE_ERROR') {
                         throw e;
                     }
@@ -288,16 +338,12 @@ async function setupDb(configInput = null) {
                 });
             }
 
-            // Post-initialization (RBAC, Avatars, etc. logic)
-            // ... (I'll keep the logic from the original db.js here)
-            
-            // Initialize RBAC if empty
             const rolesCount = await db.get('SELECT COUNT(*) as count FROM roles');
             if (rolesCount.count === 0) {
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'admin', 'Full access');
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'contributor', 'Can manage content');
                 await db.run('INSERT INTO roles (name, description) VALUES (?, ?)', 'user', 'Standard user');
-                
+
                 const perms = [
                     ['access:admin', 'Full administrative access'],
                     ['content:download', 'Can trigger downloads'],
@@ -321,12 +367,12 @@ async function setupDb(configInput = null) {
                 for (const p of allPerms) {
                     // Admin gets everything
                     await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', adminRole.id, p.id);
-                    
+
                     // Contributor mapping
                     if (['content:download', 'content:subscribe', 'content:suggest', 'mod:approve-suggestions', 'sys:view-storage'].includes(p.slug)) {
                         await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', colabRole.id, p.id);
                     }
-                    
+
                     // User mapping
                     if (['content:suggest'].includes(p.slug)) {
                         await db.run('INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', userRole.id, p.id);

@@ -164,11 +164,23 @@ const Library = () => {
   const handleApproveSeries = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-        await axios.post(`${API_BASE}/library/series/${id}/approve`);
+        await axios.post(`${API_BASE}/library/approve`);
         fetchLibrary();
     } catch (e) {
         console.error(e);
         alert(t('library.error_approving'));
+    }
+  };
+
+  const handleDeleteSeries = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(t('library.delete_series_confirm'))) return;
+    try {
+        await axios.delete(`${API_BASE}/library/series/${id}`);
+        fetchLibrary();
+    } catch (e) {
+        console.error(e);
+        alert(t('library.error_deleting_series'));
     }
   };
 
@@ -455,6 +467,24 @@ const Library = () => {
                       title={t('library.confirm_metadata_tooltip')}
                     >
                       <CheckCircle size={18} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteSeries(item.id, e)}
+                      className="bg-red-600 hover:bg-red-500 text-white p-2 rounded-full shadow-xl border border-white/20 transition-all hover:scale-110 active:scale-95"
+                      title={t('library.delete_series_tooltip')}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                )}
+                {isAdmin && item.needs_review !== 1 && (
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <button 
+                      onClick={(e) => handleDeleteSeries(item.id, e)}
+                      className="bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-full shadow-xl border border-white/20 backdrop-blur-md transition-all hover:scale-110 active:scale-95"
+                      title={t('library.delete_series_tooltip')}
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 )}
