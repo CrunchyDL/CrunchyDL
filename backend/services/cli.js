@@ -14,11 +14,40 @@ class CliService {
         this.cliPath = path.resolve(__dirname, '../multi-downloader-nx/lib/index.js');
         this.configService = new ConfigService();
         this.isProcessingQueue = false;
+        this.isQueuePaused = false;
         this.encodingStarts = new Map();
         this.totalDurations = new Map();
 
+        // Load queue pause state
+        this.loadQueueState();
+
         // Reset orphaned downloads from previous session
         this.resetStuckDownloads();
+    }
+
+    async loadQueueState() {
+        try {
+            const pausedSetting = await this.db.get("SELECT value FROM settings WHERE `key` = 'queue_paused'");
+            this.isQueuePaused = pausedSetting?.value === 'true';
+            console.log(`[Queue] Initial state: ${this.isQueuePaused ? 'PAUSED' : 'RUNNING'}`);
+        } catch (err) {
+            console.error('[Queue] Error loading pause state:', err);
+        }
+    }
+
+    async pauseQueue() {
+        this.isQueuePaused = true;
+        await this.db.run("INSERT INTO settings (`key`, value) VALUES ('queue_paused', 'true') ON DUPLICATE KEY UPDATE value = 'true'");
+        console.log('[Queue] PAUSED');
+        this.io.emit('queueStatus', { paused: true });
+    }
+
+    async resumeQueue() {
+        this.isQueuePaused = false;
+        await this.db.run("INSERT INTO settings (`key`, value) VALUES ('queue_paused', 'false') ON DUPLICATE KEY UPDATE value = 'false'");
+        console.log('[Queue] RESUMED');
+        this.io.emit('queueStatus', { paused: false });
+        this.processQueue();
     }
 
     async resetStuckDownloads() {
@@ -31,7 +60,7 @@ class CliService {
     }
 
     async processQueue() {
-        if (this.isProcessingQueue) return;
+        if (this.isProcessingQueue || this.isQueuePaused) return;
         this.isProcessingQueue = true;
 
         try {
@@ -156,6 +185,24 @@ class CliService {
             }
         }
 
+        if (download.ignore_archive === 1) {
+            console.log(`[CLI] Force re-download requested for ${downloadId}. Clearing archive...`);
+            const ArchiveService = require('./archive');
+            if (download.episodes !== 'all') {
+                // episodes can be "1", "1,2", "1-5", etc. but usually it's a single ep in this context
+                // ArchiveService.clearEpisode expects a string/number
+                const epNums = download.episodes.toString().split(',').map(e => e.trim());
+                for (const ep of epNums) {
+                    ArchiveService.clearEpisode(download.service, download.show_id, ep);
+                    if (download.season_id) {
+                        ArchiveService.clearEpisode(download.service, download.season_id, ep);
+                    }
+                }
+            } else {
+                ArchiveService.clearSeries(download.service, download.show_id);
+            }
+        }
+
         const muxConfig = await this.configService.getMuxingConfig();
 
         const args = [
@@ -204,10 +251,10 @@ class CliService {
                         const ffmpegOpts = [
                             `-c:v ${preset.codec}`,
                             `-crf ${preset.crf}`,
-                            `-vf scale=${preset.resolution}`,
-                            `-r ${preset.fps}`,
+                            preset.resolution && preset.resolution !== 'auto' ? `-vf scale=${preset.resolution}` : null,
+                            preset.fps && preset.fps !== 'auto' ? `-r ${preset.fps}` : null,
                             '-c:a copy'
-                        ];
+                        ].filter(Boolean);
                         args.push('--ffmpegOptions=' + ffmpegOpts.join(' '));
                         if (muxConfig.x265Preset && muxConfig.x265Preset !== 'none' && (preset.codec === 'libx265' || preset.codec === 'libx264')) {
                             args.push('--preset', muxConfig.x265Preset);
@@ -407,8 +454,8 @@ class CliService {
     }
 
     async retryDownload(id) {
-        // Reset progress and status in DB
-        await this.db.run("UPDATE downloads SET status = 'queued', progress = 0 WHERE id = ?", id);
+        // Reset progress and status in DB, and set ignore_archive to 1 to force re-download
+        await this.db.run("UPDATE downloads SET status = 'queued', progress = 0, ignore_archive = 1 WHERE id = ?", id);
         // Start queue again
         this.processQueue();
         return true;
@@ -461,15 +508,19 @@ class CliService {
                 fs.mkdirSync(seriesDir, { recursive: true });
             }
 
-            const seasonNum = parseInt(seasonNumber) || 1;
-            const seasonDirName = `Season ${seasonNum.toString().padStart(2, '0')}`;
-            const seasonDir = path.join(seriesDir, seasonDirName);
-            if (!fs.existsSync(seasonDir)) {
-                console.log(`[Queue] Creating season directory: ${seasonDir}`);
-                fs.mkdirSync(seasonDir, { recursive: true });
+            // Only create Season folder if seasonNumber is explicitly provided
+            if (seasonNumber) {
+                const seasonNum = parseInt(seasonNumber);
+                const seasonDirName = `Season ${seasonNum.toString().padStart(2, '0')}`;
+                const seasonDir = path.join(seriesDir, seasonDirName);
+                if (!fs.existsSync(seasonDir)) {
+                    console.log(`[Queue] Creating season directory: ${seasonDir}`);
+                    fs.mkdirSync(seasonDir, { recursive: true });
+                }
+                return { seriesDir, seasonDir, folderName };
             }
 
-            return { seriesDir, seasonDir, folderName };
+            return { seriesDir, seasonDir: null, folderName };
         } catch (err) {
             console.error(`[Queue] Failed to ensure folder structure for ${show_id}:`, err.message);
             return null;
@@ -484,14 +535,14 @@ class CliService {
         let resolvedPath = rootPath;
         if (rootPath) {
             const folderInfo = await this.ensureSeriesFolder(show_id, name.split(' - ')[0], rootPath, season_number);
-            if (folderInfo && folderInfo.seasonDir) {
-                resolvedPath = folderInfo.seasonDir;
+            if (folderInfo) {
+                resolvedPath = folderInfo.seasonDir || folderInfo.seriesDir;
             }
         }
 
         const result = await this.db.run(
-            'INSERT INTO downloads (name, service, show_id, season_id, episodes, path, status, progress, triggered_by, thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            name, normalizedService, show_id, season_id, episodes, resolvedPath, 'queued', 0, triggeredBy, image
+            'INSERT INTO downloads (name, service, show_id, season_id, episodes, path, status, progress, triggered_by, thumbnail, ignore_archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            name, normalizedService, show_id, season_id, episodes, resolvedPath, 'queued', 0, triggeredBy, image, arguments[0].force ? 1 : 0
         );
 
         // Trigger queue processing

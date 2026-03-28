@@ -86,6 +86,31 @@ class ArchiveService {
         if (found) return this.save(data);
         return false;
     }
+
+    clearEpisode(service, id, episodeNum) {
+        const data = this.load();
+        if (!data[service]) return false;
+        
+        let found = false;
+        const epStr = episodeNum.toString();
+
+        for (const type in data[service]) {
+            if (Array.isArray(data[service][type])) {
+                const entry = data[service][type].find(item => item.id === id);
+                if (entry && entry.already.includes(epStr)) {
+                    entry.already = entry.already.filter(ep => ep !== epStr);
+                    found = true;
+                    // Clean up entry if it has no more episodes
+                    if (entry.already.length === 0) {
+                        data[service][type] = data[service][type].filter(item => item.id !== id);
+                    }
+                }
+            }
+        }
+        
+        if (found) return this.save(data);
+        return false;
+    }
 }
 
 module.exports = new ArchiveService();

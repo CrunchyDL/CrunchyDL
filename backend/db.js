@@ -162,6 +162,7 @@ const SCHEMA = `
     );
 
     ALTER TABLE downloads ADD COLUMN thumbnail TEXT;
+    ALTER TABLE downloads ADD COLUMN ignore_archive INTEGER DEFAULT 0;
     -- Fix for MySQL: TEXT columns cannot be unique without a length
     ALTER TABLE series MODIFY COLUMN folder_name VARCHAR(255); 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_series_folder_name ON series(folder_name);

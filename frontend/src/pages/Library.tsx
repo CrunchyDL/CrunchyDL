@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Grid, List as ListIcon, FolderOpen, RefreshCw, X, Download, Trash2, CheckCircle, Cloud, Play, ChevronRight, SearchIcon, Folder, Bell, BellOff, Zap } from 'lucide-react';
+import { Filter, Grid, List as ListIcon, FolderOpen, RefreshCw, X, Download, Trash2, CheckCircle, Cloud, Play, ChevronRight, SearchIcon, Folder, Bell, BellOff, Zap, Check } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,7 @@ const Library = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'anilist' | 'tmdb' | 'tvdb' | 'crunchy' | 'local'>('all');
+  const [forceDownload, setForceDownload] = useState(false);
   
   // Repair Modal States
   const [isRepairModalOpen, setIsRepairModalOpen] = useState(false);
@@ -101,15 +102,18 @@ const Library = () => {
   };
 
   const downloadMissing = async (season: any) => {
-    const missingEps = season.episodes.filter((ep: any) => !ep.is_downloaded);
-    if (missingEps.length === 0) return alert(t('library.all_downloaded'));
+    const episodesToDownload = forceDownload ? season.episodes : season.episodes.filter((ep: any) => !ep.is_downloaded);
+    if (episodesToDownload.length === 0) return alert(t('library.all_downloaded'));
     
     try {
         await axios.post(`${API_BASE}/downloads`, {
             name: `${selectedSeries.title} - ${season.title}`,
             service: 'crunchy',
             show_id: selectedSeries.id,
-            episodes: missingEps.map((ep: any) => ep.episode_number).join(',')
+            season_id: season.id,
+            season_number: season.season_number,
+            episodes: episodesToDownload.map((ep: any) => ep.episode_number).join(','),
+            force: forceDownload
         });
         alert(t('library.download_triggered'));
     } catch (e) {
@@ -610,6 +614,18 @@ const Library = () => {
                     )}
                   </div>
                   <p className="text-gray-400 text-sm leading-relaxed">{selectedSeries.description}</p>
+                  
+                  {isContributor && (
+                    <div 
+                      className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10 cursor-pointer hover:bg-white/10 transition-all select-none group/force w-fit"
+                      onClick={() => setForceDownload(!forceDownload)}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${forceDownload ? 'bg-primary border-primary' : 'border-gray-600 group-hover/force:border-gray-400'}`}>
+                        {forceDownload && <Check size={14} strokeWidth={4} className="text-secondary" />}
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors">Force Re-download (Bypass Archive)</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-8">
@@ -637,28 +653,42 @@ const Library = () => {
                               <span className="text-sm font-medium truncate">{ep.title}</span>
                             </div>
                             <div className="flex items-center gap-2 pl-2">
-                              {ep.is_downloaded ? (
-                                <>
-                                  <CheckCircle 
-                                    size={16} 
-                                    className="text-green-500 cursor-pointer hover:scale-110 active:scale-90 transition-transform" 
-                                    onClick={(e) => { e.stopPropagation(); handleToggleDownloaded(ep.id); }}
-                                  />
-                                  {isAdmin && (
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); deleteEpisode(ep.id); }}
-                                      className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                <Cloud 
-                                  size={16} 
-                                  className="text-gray-600 cursor-pointer hover:text-primary hover:scale-110 active:scale-90 transition-all" 
-                                  onClick={(e) => { e.stopPropagation(); handleToggleDownloaded(ep.id); }}
-                                />
+                              {(!ep.is_downloaded || forceDownload) && (
+                                <button 
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    axios.post(`${API_BASE}/downloads`, {
+                                        name: `${selectedSeries.title} - E${ep.episode_number}`,
+                                        service: 'crunchy',
+                                        show_id: selectedSeries.id,
+                                        season_id: season.id,
+                                        season_number: season.season_number,
+                                        episodes: ep.episode_number.toString(),
+                                        force: forceDownload
+                                    }).then(() => alert(t('library.download_triggered')));
+                                  }}
+                                  className={`p-1.5 transition-all hover:scale-110 active:scale-90 ${ep.is_downloaded ? 'text-primary' : 'text-gray-400 hover:text-primary'}`}
+                                  title={t('catalog.download_episode')}
+                                >
+                                  <Download size={16} />
+                                </button>
+                              )}
+                              
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); handleToggleDownloaded(ep.id); }}
+                                className={`p-1.5 transition-all hover:scale-110 active:scale-90 ${ep.is_downloaded ? 'text-green-500' : 'text-gray-600 hover:text-green-500'}`}
+                                title={ep.is_downloaded ? t('catalog.mark_as_undownloaded') : t('catalog.mark_as_downloaded')}
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+
+                              {ep.is_downloaded && isAdmin && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); deleteEpisode(ep.id); }}
+                                  className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               )}
                             </div>
                           </div>

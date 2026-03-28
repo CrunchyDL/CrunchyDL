@@ -63,6 +63,7 @@ const Catalog: React.FC = () => {
   const [mode, setMode] = useState<'seasonal' | 'browse' | 'search'>('seasonal');
   const [searchQuery, setSearchQuery] = useState('');
   const [episodesStatus, setEpisodesStatus] = useState<any>({});
+  const [forceDownload, setForceDownload] = useState(false);
   
   const { user, isAdmin, isContributor, token, isLoading } = useAuth();
   
@@ -329,7 +330,7 @@ const Catalog: React.FC = () => {
     }
   };
 
-  const startDownload = async (anime: Anime, episodes: string) => {
+  const startDownload = async (anime: Anime, episodes: string, seasonId?: string, seasonNumber?: number) => {
     try {
       const response = await fetch('/api/downloads', {
         method: 'POST',
@@ -341,9 +342,12 @@ const Catalog: React.FC = () => {
           name: anime.title,
           service: 'crunchy',
           show_id: anime.id,
+          season_id: seasonId,
+          season_number: seasonNumber,
           episodes,
           rootPath: selectedVolume,
-          image: anime.image
+          image: anime.image,
+          force: forceDownload
         })
       });
       if (response.ok) {
@@ -400,8 +404,8 @@ const Catalog: React.FC = () => {
       return;
     }
 
-    // Call startDownload with specific episodes
-    startDownload(anime, episodesToDownload.sort((a, b) => a - b).join(','));
+    // Call startDownload with specific episodes and season info
+    startDownload(anime, episodesToDownload.sort((a, b) => a - b).join(','), season.id, season.season_number);
   };
 
   const filteredAnime = useMemo(() => {
@@ -698,6 +702,19 @@ const Catalog: React.FC = () => {
                                 {t('catalog.download_missing_to_drive', { drive: storageData.find(d => d.path === selectedVolume)?.name || selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
                             </button>
                           </div>
+                          
+                          <div 
+                            className="flex items-center gap-3 px-5 py-3 bg-white/5 border border-white/10 rounded-2xl cursor-pointer hover:bg-white/10 transition-all select-none group/force"
+                            onClick={() => setForceDownload(!forceDownload)}
+                          >
+                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${forceDownload ? 'bg-orange-500 border-orange-400' : 'border-white/20 group-hover/force:border-white/40'}`}>
+                              {forceDownload && <Check size={14} strokeWidth={4} className="text-white" />}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none mb-1">Force Re-download</span>
+                              <span className="text-[8px] font-medium text-gray-500 uppercase tracking-tight">Bypasses internal download archive</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -794,15 +811,17 @@ const Catalog: React.FC = () => {
                                     </div>
 
                                     <div className="flex items-center gap-1 opacity-0 group-hover/ep:opacity-100 transition-opacity">
-                                      {!epStatus.is_downloaded ? (
+                                      {(!epStatus.is_downloaded || forceDownload) && (
                                         <button 
-                                          onClick={() => startDownload(selectedAnime, ep.episode_number.toString())}
+                                          onClick={() => startDownload(selectedAnime, ep.episode_number.toString(), s.id, s.season_number)}
                                           className="p-2.5 rounded-xl bg-primary hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 transition-all hover:scale-105"
                                           title={t('catalog.download_episode')}
                                         >
                                           <Download size={14} />
                                         </button>
-                                      ) : (
+                                      )}
+                                      
+                                      {epStatus.is_downloaded && (
                                         <button 
                                           onClick={() => deleteEpisode(ep.id)}
                                           className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all hover:scale-105"

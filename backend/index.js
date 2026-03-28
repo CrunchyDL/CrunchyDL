@@ -897,7 +897,7 @@ app.get('/api/downloads', authenticate, async (req, res) => {
 });
 
 app.post('/api/downloads', authenticate, hasPermission('content:download'), async (req, res) => {
-    const { name, service, show_id, season_id, season_number, episodes = 'all', rootPath, image } = req.body;
+    const { name, service, show_id, season_id, season_number, episodes = 'all', rootPath, image, force } = req.body;
 
     let episodeList = (episodes !== 'all' && typeof episodes === 'string' && episodes.includes(','))
         ? episodes.split(',').map(e => e.trim())
@@ -928,7 +928,8 @@ app.post('/api/downloads', authenticate, hasPermission('content:download'), asyn
             episodes: ep,
             rootPath,
             triggeredBy: req.user.username,
-            image
+            image,
+            force
         });
         ids.push(taskId);
     }
@@ -952,6 +953,20 @@ app.post('/api/downloads/clear-finished', authenticate, hasPermission('sys:manag
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+app.get('/api/downloads/queue-status', authenticate, async (req, res) => {
+    res.json({ paused: cliServiceInstance.isQueuePaused });
+});
+
+app.post('/api/downloads/pause', authenticate, hasPermission('content:download'), async (req, res) => {
+    await cliServiceInstance.pauseQueue();
+    res.json({ success: true });
+});
+
+app.post('/api/downloads/resume', authenticate, hasPermission('content:download'), async (req, res) => {
+    await cliServiceInstance.resumeQueue();
+    res.json({ success: true });
 });
 
 // Versioning

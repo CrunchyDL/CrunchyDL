@@ -813,7 +813,7 @@ const PresetManagementSection = ({ presets, onSave, onDelete }: any) => {
   const [editingPreset, setEditingPreset] = useState<any>(null);
   const [isAdding, setIsAdding] = useState(false);
 
-  const emptyPreset = { id: '', name: '', codec: 'libx264', resolution: '1080p', fps: 'auto', crf: 23, group: 'General' };
+  const emptyPreset = { id: '', name: '', codec: 'libx264', resolution: '1080p', fps: '24000/1001', crf: 23, group: 'General' };
 
   const groups = Array.from(new Set(presets.map((p: any) => p.group || 'General'))).sort() as string[];
 
@@ -877,45 +877,55 @@ const PresetManagementSection = ({ presets, onSave, onDelete }: any) => {
                           <option value="libsvtav1">AV1 (SVT-AV1)</option>
                       </select>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-3 col-span-1">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('settings.resolution')}</label>
-                          <select 
-                            value={editingPreset.resolution} 
-                            onChange={e => setEditingPreset({...editingPreset, resolution: e.target.value})}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary appearance-none"
-                          >
-                              <option value="1080p">1080p</option>
-                              <option value="720p">720p</option>
-                              <option value="480p">480p</option>
-                              <option value="original">{t('settings.original')}</option>
-                          </select>
+                      <div className="grid grid-cols-4 gap-3">
+                          <div className="space-y-3 col-span-1">
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('settings.resolution')}</label>
+                              <select 
+                                value={editingPreset.resolution} 
+                                onChange={e => setEditingPreset({...editingPreset, resolution: e.target.value})}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary appearance-none"
+                              >
+                                  <option value="1920:1080">1080p</option>
+                                  <option value="1280:720">720p</option>
+                                  <option value="854:480">480p</option>
+                                  <option value="640:360">360p</option>
+                                  <option value="auto">{t('settings.original')}</option>
+                              </select>
+                          </div>
+                          <div className="space-y-3 col-span-1">
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">FPS</label>
+                              <input 
+                                value={editingPreset.fps} 
+                                onChange={e => setEditingPreset({...editingPreset, fps: e.target.value})}
+                                placeholder="23.976"
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
+                              />
+                          </div>
+                          <div className="space-y-3 col-span-1">
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">CRF</label>
+                              <input 
+                                type="number"
+                                value={editingPreset.crf} 
+                                onChange={e => setEditingPreset({...editingPreset, crf: parseInt(e.target.value)})}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
+                              />
+                          </div>
+                          <div className="space-y-3 col-span-1">
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('common.group')}</label>
+                              <input 
+                                value={editingPreset.group} 
+                                onChange={e => setEditingPreset({...editingPreset, group: e.target.value})}
+                                list="preset-groups"
+                                placeholder={t('common.general')}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
+                              />
+                              <datalist id="preset-groups">
+                                  {groups.map(g => (
+                                      <option key={g} value={g} />
+                                  ))}
+                              </datalist>
+                          </div>
                       </div>
-                      <div className="space-y-3 col-span-1">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">CRF</label>
-                          <input 
-                            type="number"
-                            value={editingPreset.crf} 
-                            onChange={e => setEditingPreset({...editingPreset, crf: parseInt(e.target.value)})}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
-                          />
-                      </div>
-                      <div className="space-y-3 col-span-1">
-                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('common.group')}</label>
-                          <input 
-                            value={editingPreset.group} 
-                            onChange={e => setEditingPreset({...editingPreset, group: e.target.value})}
-                            list="preset-groups"
-                            placeholder={t('common.general')}
-                            className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-4 text-sm text-white focus:outline-none focus:border-primary"
-                          />
-                          <datalist id="preset-groups">
-                              {groups.map(g => (
-                                  <option key={g} value={g} />
-                              ))}
-                          </datalist>
-                      </div>
-                  </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
