@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Shield, Info, LogOut, FileVideo, Settings as SettingsIcon, Save, Check, ChevronDown, X, ChevronUp, Library, Database, Cpu, Monitor, Download, Plus, Folder } from 'lucide-react';
+import { User, Shield, Info, LogOut, FileVideo, Settings as SettingsIcon, Save, Check, ChevronDown, X, ChevronUp, Library, Database, Cpu, Monitor, Download, Plus, Folder, Tag } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 import { useTranslation } from 'react-i18next';
@@ -658,42 +658,76 @@ const MetadataSection = ({ metadataProviders, moveProvider, config, updateConfig
                 </div>
             </div>
 
-            <div className="space-y-3">
-                {libraryRoots.map((root: string, index: number) => (
-                    <div key={index} className="flex gap-2 animate-in slide-in-from-left-2 transition-all">
-                        <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-2xl px-4 py-3 group focus-within:border-primary/50 transition-all">
-                            <Folder size={18} className="text-gray-500 mr-3" />
+            <div className="space-y-4">
+                {libraryRoots.map((root: any, index: number) => {
+                    const rootName = typeof root === 'string' ? '' : root.name;
+                    const rootPath = typeof root === 'string' ? root : root.path;
+                    
+                    return (
+                        <div key={index} className="space-y-2 p-4 bg-black/20 rounded-3xl border border-white/5 animate-in slide-in-from-left-2 transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                                    <Tag size={10} /> {t('common.name')}
+                                </div>
+                                <button 
+                                    onClick={() => setLibraryRoots(libraryRoots.filter((_: any, i: number) => i !== index))}
+                                    className="p-1.5 hover:bg-red-500/10 text-gray-600 hover:text-red-500 rounded-lg transition-all"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
                             <input 
                                 type="text"
-                                value={root}
+                                value={rootName}
+                                placeholder={t('setup.add_folder')}
                                 onChange={(e) => {
                                     const newRoots = [...libraryRoots];
-                                    newRoots[index] = e.target.value;
+                                    if (typeof root === 'string') {
+                                        newRoots[index] = { name: e.target.value, path: root };
+                                    } else {
+                                        newRoots[index] = { ...root, name: e.target.value };
+                                    }
                                     setLibraryRoots(newRoots);
                                 }}
-                                className="bg-transparent border-none focus:outline-none text-white text-sm flex-1"
+                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary transition-all mb-2"
                             />
-                            <button 
-                                onClick={() => {
-                                    setActivePickerIndex(index);
-                                    setIsPickerOpen(true);
-                                }}
-                                className="p-2 hover:bg-white/10 text-primary rounded-lg transition-colors border-l border-white/10 ml-2"
-                            >
-                                <Folder size={14} />
-                            </button>
+                            
+                            <div className="flex items-center gap-2 text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-2">
+                                <Folder size={10} /> {t('common.path')}
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="flex-1 flex items-center bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 group focus-within:border-primary/50 transition-all">
+                                    <input 
+                                        type="text"
+                                        value={rootPath}
+                                        onChange={(e) => {
+                                            const newRoots = [...libraryRoots];
+                                            if (typeof root === 'string') {
+                                                newRoots[index] = { name: '', path: e.target.value };
+                                            } else {
+                                                newRoots[index] = { ...root, path: e.target.value };
+                                            }
+                                            setLibraryRoots(newRoots);
+                                        }}
+                                        className="bg-transparent border-none focus:outline-none text-white text-xs flex-1 font-mono"
+                                    />
+                                    <button 
+                                        onClick={() => {
+                                            setActivePickerIndex(index);
+                                            setIsPickerOpen(true);
+                                        }}
+                                        className="p-1.5 hover:bg-white/10 text-primary rounded-lg transition-colors border-l border-white/10 ml-2"
+                                    >
+                                        <Folder size={12} />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <button 
-                            onClick={() => setLibraryRoots(libraryRoots.filter((_: any, i: number) => i !== index))}
-                            className="p-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl transition-all"
-                        >
-                            <X size={20} />
-                        </button>
-                    </div>
-                ))}
+                    );
+                })}
                 <button 
-                    onClick={() => setLibraryRoots([...libraryRoots, ''])}
-                    className="w-full border-2 border-dashed border-white/5 hover:border-primary/50 hover:bg-primary/5 text-gray-500 hover:text-primary py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mt-4 font-bold uppercase tracking-widest text-xs"
+                    onClick={() => setLibraryRoots([...libraryRoots, { name: '', path: '' }])}
+                    className="w-full border-2 border-dashed border-white/5 hover:border-primary/50 hover:bg-primary/5 text-gray-500 hover:text-primary py-4 rounded-3xl flex items-center justify-center gap-2 transition-all mt-4 font-bold uppercase tracking-widest text-xs"
                 >
                     <Plus size={16} /> {t('setup.add_folder')}
                 </button>

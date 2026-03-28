@@ -27,7 +27,8 @@
     "group": "Group",
     "general": "General",
     "other": "Other",
-    "name": "Name"
+    "name": "Name",
+    "path": "Path"
   },
   "dashboard": {
     "welcome": "Welcome back",

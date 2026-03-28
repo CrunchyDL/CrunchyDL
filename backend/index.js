@@ -924,6 +924,7 @@ app.post('/api/downloads', authenticate, hasPermission('content:download'), asyn
             service,
             show_id,
             season_id,
+            season_number,
             episodes: ep,
             rootPath,
             triggeredBy: req.user.username,

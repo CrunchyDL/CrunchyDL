@@ -35,8 +35,15 @@ class LibraryService {
             try {
                 const roots = JSON.parse(setting.value);
                 if (Array.isArray(roots)) {
-                    this.libraryPaths = roots.map(p => path.resolve(p.trim()));
-                    console.log(`[Library] Loaded ${this.libraryPaths.length} roots from DB.`);
+                    // Support both legacy string[] and new {name, path}[] formats
+                    this.libraryRootsFull = roots.map(r => {
+                        if (typeof r === 'string') {
+                            return { name: path.basename(r), path: path.resolve(r.trim()) };
+                        }
+                        return { name: r.name, path: path.resolve(r.path.trim()) };
+                    });
+                    this.libraryPaths = this.libraryRootsFull.map(r => r.path);
+                    console.log(`[Library] Loaded ${this.libraryPaths.length} roots from DB (Labeled: ${this.libraryRootsFull.every(r => r.name !== path.basename(r.path))})`);
                     return;
                 }
             } catch (e) {
@@ -45,6 +52,7 @@ class LibraryService {
         }
         const pathsStr = process.env.LIBRARY_PATHS || process.env.DOWNLOAD_DIR || './downloads';
         this.libraryPaths = pathsStr.split(',').map(p => path.resolve(p.trim()));
+        this.libraryRootsFull = this.libraryPaths.map(p => ({ name: path.basename(p), path: p }));
         console.log(`[Library] Using fallback roots from ENV: ${this.libraryPaths.length}`);
     }
 
@@ -188,9 +196,22 @@ class LibraryService {
         
         if (series) console.log(`[Library] [Sync] Found current record: ${series.id} (needs_review: ${series.needs_review})`);
 
-        // Path Portability: If found but lib_path is different, update it
-        if (series && series.lib_path !== libPath) {
-            console.log(`[Library] [Sync] Updating lib_path for ${folderName}: ${series.lib_path} -> ${libPath}`);
+        // Path Portability & Collision Prevention: 
+        // If series found but lib_path is different, only update if the folder NO LONGER exists in the old path.
+        // This prevents "hijacking" a series record when two roots have an identical folder name.
+        if (series && series.lib_path !== libPath && series.lib_path !== null) {
+            const oldLocation = path.join(series.lib_path, folderName);
+            if (fs.existsSync(oldLocation)) {
+                console.log(`[Library] [Collision] Folder "${folderName}" exists in both ${series.lib_path} and ${libPath}. Keeping association with: ${series.lib_path}`);
+                // If it exists in the OLD path, we don't proceed with this sync for the NEW path
+                // to avoid duplicate records/confusing one for the other.
+                return; 
+            } else {
+                console.log(`[Library] [Sync] Folder moved or root changed for ${folderName}: ${series.lib_path} -> ${libPath}`);
+                await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', libPath, series.id);
+                series.lib_path = libPath;
+            }
+        } else if (series && series.lib_path === null) {
             await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', libPath, series.id);
             series.lib_path = libPath;
         }
@@ -636,9 +657,23 @@ class LibraryService {
         if (!series) return null;
         series.full_path = null;
         if (series.folder_name) {
-            for (const libPath of this.libraryPaths) {
-                const fullPath = path.join(libPath, series.folder_name);
-                if (fs.existsSync(fullPath)) { series.full_path = fullPath; break; }
+            // Priority 1: Use the lib_path stored in the database if it exists and is valid
+            if (series.lib_path && fs.existsSync(path.join(series.lib_path, series.folder_name))) {
+                series.full_path = path.join(series.lib_path, series.folder_name);
+            } else {
+                // Priority 2: Searching all library roots (fallback or for orphaned records)
+                for (const libPath of this.libraryPaths) {
+                    const fullPath = path.join(libPath, series.folder_name);
+                    if (fs.existsSync(fullPath)) { 
+                        series.full_path = fullPath; 
+                        // Automatically heal the record if we found it elsewhere
+                        if (series.lib_path !== libPath) {
+                            await this.db.run('UPDATE series SET lib_path = ? WHERE id = ?', libPath, series.id);
+                            series.lib_path = libPath;
+                        }
+                        break; 
+                    }
+                }
             }
         }
         const seasons = await this.db.all('SELECT * FROM seasons WHERE series_id = ? ORDER BY season_number', series.id);
@@ -871,7 +906,9 @@ class LibraryService {
         return await this.db.get('SELECT * FROM series WHERE id = ?', match.id);
     }
 
-    getLibraryPaths() { return this.libraryPaths; }
+    getLibraryPaths() { 
+        return this.libraryRootsFull || this.libraryPaths.map(p => ({ name: path.basename(p), path: p })); 
+    }
 
     async findLastEpisodeNumberOnDisk(seriesPath) {
         if (!seriesPath || !fs.existsSync(seriesPath)) return 0;

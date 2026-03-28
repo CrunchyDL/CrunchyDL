@@ -27,7 +27,8 @@
     "group": "Grupo",
     "general": "General",
     "other": "Otros",
-    "name": "Nombre"
+    "name": "Nombre",
+    "path": "Ruta"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo",
