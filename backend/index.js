@@ -1176,7 +1176,16 @@ app.get('/api/system/storage', authenticate, async (req, res) => {
     try {
         const volumes = libServiceInstance.getLibraryPaths();
         if (!volumes || volumes.length === 0) return res.json([]);
-        const stats = await Promise.all(volumes.map(v => systemService.getDiskSpace(v)));
+        
+        const stats = await Promise.all(volumes.map(async (v) => {
+            const rootPath = typeof v === 'string' ? v : v.path;
+            const diskInfo = await systemService.getDiskSpace(rootPath);
+            return {
+                ...diskInfo,
+                name: typeof v === 'string' ? path.basename(v) : v.name,
+                path: rootPath
+            };
+        }));
         res.json(stats);
     } catch (err) {
         console.error('Storage info error:', err);
