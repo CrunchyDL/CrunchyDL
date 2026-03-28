@@ -419,6 +419,16 @@ class CliService {
         return true;
     }
 
+    sanitizePathPart(n) {
+        if (!n) return '_';
+        const rep = {
+            '/': '_', '\\': '_', ':': '_', '*': '∗', 
+            '?': '？', '"': "'", '<': '‹', '>': '›', '|': '_'
+        };
+        const cleaned = n.replace(/[\/\\:\*\?"<>\|]/g, (ch) => rep[ch] || '_');
+        return cleaned.replace(/[\x00-\x1f\x80-\x9f]/g, '_').replace(/^\.+$/, '_').replace(/[\. ]+$/, '_').trim();
+    }
+
     async ensureSeriesFolder(show_id, title, rootPath, seasonNumber = null) {
         if (!rootPath) return null;
         
@@ -434,7 +444,7 @@ class CliService {
             const finalTitle = title || series?.title || 'Unknown Series';
 
             if (!folderName) {
-                folderName = finalTitle.replace(/[<>:"\/\\|?*\x00-\x1F]/g, '_').trim();
+                folderName = this.sanitizePathPart(finalTitle);
                 console.log(`[Queue] Assigning folder name "${folderName}" for series "${finalTitle}"`);
                 await this.db.run('UPDATE series SET folder_name = ?, lib_path = ? WHERE id = ?', folderName, rootPath, show_id);
                 if (series?.crunchyroll_id) {
