@@ -9,6 +9,7 @@ const metadataHub = require('./metadata-hub');
 const offlineMetadata = require('./offline-metadata');
 const axios = require('axios');
 const crypto = require('crypto');
+const archiveService = require('./archive');
 
 class LibraryService {
     constructor(db, cliService) {
@@ -737,7 +738,12 @@ class LibraryService {
 
     async deleteSeries(seriesId) {
         console.log(`[Library] Deleting series ${seriesId} from database...`);
-        
+
+        // Fetch series metadata BEFORE deletion to know which provider to clear in archive
+        const series = await this.db.get('SELECT crunchyroll_id, metadata_provider FROM series WHERE id = ?', seriesId);
+        const crId = series?.crunchyroll_id || seriesId;
+        const provider = series?.metadata_provider || 'crunchy';
+
         // 1. Delete associated episodes
         await this.db.run('DELETE FROM episodes WHERE series_id = ?', seriesId);
         
@@ -753,6 +759,10 @@ class LibraryService {
         
         // 5. Cleanup offline metadata cache
         await offlineMetadata.delete(seriesId);
+
+        // 6. Cleanup download archive/history for multiple providers (Allows full re-download)
+        archiveService.clearSeries(provider, seriesId);
+        if (crId !== seriesId) archiveService.clearSeries(provider, crId);
         
         console.log(`[Library] Series ${seriesId} deleted successfully.`);
         return true;

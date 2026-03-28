@@ -69,6 +69,23 @@ class ArchiveService {
         
         return this.save(data);
     }
+
+    clearSeries(service, id) {
+        const data = this.load();
+        if (!data[service]) return false;
+        
+        let found = false;
+        for (const type in data[service]) {
+            if (Array.isArray(data[service][type])) {
+                const initialLength = data[service][type].length;
+                data[service][type] = data[service][type].filter(item => item.id !== id);
+                if (data[service][type].length !== initialLength) found = true;
+            }
+        }
+        
+        if (found) return this.save(data);
+        return false;
+    }
 }
 
 module.exports = new ArchiveService();
