@@ -664,7 +664,7 @@ const Catalog: React.FC = () => {
                                 >
                                   {storageData.map(drive => (
                                     <option key={drive.path} value={drive.path} className="bg-secondary">
-                                      {drive.path.split(/[\\/]/).pop() || drive.path} — {drive.free} {t('catalog.available')}
+                                      {drive.name || drive.path.split(/[\\/]/).pop() || drive.path} — {drive.free} {t('catalog.available')}
                                     </option>
                                   ))}
                                 </select>
@@ -687,7 +687,7 @@ const Catalog: React.FC = () => {
                               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-white/10 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl group/btn"
                             >
                                 <Download className="w-4 h-4 group-hover/btn:translate-y-0.5 transition-transform" />
-                                {t('catalog.download_full_to_drive', { drive: selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
+                                {t('catalog.download_full_to_drive', { drive: storageData.find(d => d.path === selectedVolume)?.name || selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
                             </button>
                             
                             <button
@@ -695,7 +695,7 @@ const Catalog: React.FC = () => {
                               className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xs font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-green-900/20"
                             >
                                 <Play className="w-4 h-4" />
-                                {t('catalog.download_missing_to_drive', { drive: selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
+                                {t('catalog.download_missing_to_drive', { drive: storageData.find(d => d.path === selectedVolume)?.name || selectedVolume.split(/[\\/]/).pop() || t('catalog.drive') })}
                             </button>
                           </div>
                         </div>

@@ -784,7 +784,7 @@ app.get('/api/library/series/:id/poster', async (req, res) => {
         }
 
         // 4. Fallback for local folders (look for poster.jpg, folder.jpg in the directory)
-        if (series && (series.id.startsWith('local-') || !series.image)) {
+        if (seriesId.startsWith('local-') || (series && !series.image)) {
             try {
                 const details = await libServiceInstance.getSeriesFullDetails(seriesId);
                 if (details && details.full_path) {
@@ -1362,7 +1362,16 @@ app.get('/api/system/storage', authenticate, async (req, res) => {
     try {
         const volumes = libServiceInstance.getLibraryPaths();
         if (!volumes || volumes.length === 0) return res.json([]);
-        const stats = await Promise.all(volumes.map(v => systemService.getDiskSpace(v)));
+        
+        const stats = await Promise.all(volumes.map(async (v) => {
+            const rootPath = typeof v === 'string' ? v : v.path;
+            const diskInfo = await systemService.getDiskSpace(rootPath);
+            return {
+                ...diskInfo,
+                name: typeof v === 'string' ? path.basename(v) : v.name,
+                path: rootPath
+            };
+        }));
         res.json(stats);
     } catch (err) {
         console.error('Storage info error:', err);
